@@ -1,54 +1,60 @@
 defmodule GenMcrl2 do
   def run(folder, %{:messageType => messageType, :processes => processes}) do
     {:ok, file} = File.open("#{folder}/specs.mcrl2", [:write])
-    IO.binwrite(file, "sort MessageType = #{messageType};\nsort Pid = Nat;")
-    IO.binwrite(file, "\nact\n  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;")
-    IO.binwrite(file, "\nproc\n")
+    Helpers.writeLn(file, "sort MessageType = #{messageType};", 0)
+    Helpers.writeLn(file, "sort Pid = Nat;", 0)
+    Helpers.writeLn(file, "act", 0)
+    Helpers.writeLn(file, "sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;", 1)
+    Helpers.writeLn(file, "proc", 0)
     for p <- processes do
-      IO.binwrite(file, "  #{p[:name]}(pid: Pid")
-      for s <- Map.keys(p[:state]) do
-        IO.binwrite(file, ", #{s}: #{typeToMcrl2(p[:state][s])}")
-      end
-      IO.binwrite(file, ") = ")
+      Helpers.writeLn(file, "#{p[:name]}(#{getState(p[:state])}) = ", 1, "")
       writeCmds(file, p[:run], ["pid" | Map.keys(p[:state])])
-      IO.binwrite(file, "#{p[:name]}();\n")
+      Helpers.write(file, "#{p[:name]}();", "\n")
     end
 
-    genNetwork(file)
-    genInit(file, processes)
+    writeNetwork(file)
+    writeInit(file, processes)
 
     File.close(file)
+  end
+
+  defp getState(state) do
+    extState = Map.put(state, "pid", "Pid") # add own pid
+    extState
+    |> Map.keys()
+    |> Enum.map(fn s -> "#{s}: #{typeToMcrl2(extState[s])}" end)
+    |> Enum.join(", ")
   end
 
   defp writeCmds(_, [], _), do: IO.puts("")
   defp writeCmds(file, [cmd | cmds], boundedVars) do
     case cmd do
       {:send, to: to, message: message} ->
-        IO.binwrite(file, "sendMessage(pid, #{to}, #{message}) . ")
+        Helpers.write(file, "sendMessage(pid, #{to}, #{message}) . ")
         writeCmds(file, cmds, boundedVars)
       {:receive} ->
         pidVar = getNextVar()
         messageVar = getNextVar()
-        IO.binwrite(file, "sum #{pidVar}: Pid . sum #{messageVar}: MessageType . ")
+        Helpers.write(file, "sum #{pidVar}: Pid . sum #{messageVar}: MessageType . ")
         writeCmds(file, [{:receive, from: pidVar, message: messageVar} | cmds], [messageVar | [pidVar | [boundedVars]]])
       {:receive, message: m} ->
         pidVar = getNextVar()
-        IO.binwrite(file, "sum #{pidVar}: Pid . ")
+        Helpers.write(file, "sum #{pidVar}: Pid . ")
         writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], [pidVar | boundedVars])
       {:receive, from: from} ->
         messageVar = getNextVar()
-        IO.binwrite(file, "sum #{messageVar} : MessageType .")
+        Helpers.write(file, "sum #{messageVar} : MessageType .")
         writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars])
       {:receive, from: from, message: m} ->
         cond do
           !(m in boundedVars || is_number(m)) ->
-            IO.binwrite(file, "sum #{m} : MessageType .")
+            Helpers.write(file, "sum #{m} : MessageType .")
             writeCmds(file, [{:receive, from: from, message: m} | cmds], [m | boundedVars])
          !(from in boundedVars) ->
-            IO.binwrite(file, "sum #{from} : Pid .")
+            Helpers.write(file, "sum #{from} : Pid .")
             writeCmds(file, [{:receive, from: from, message: m} | cmds], [from | boundedVars])
           true ->
-            IO.binwrite(file, "receiveMessage(pid, #{from}, #{m}) . ")
+            Helpers.write(file, "receiveMessage(pid, #{from}, #{m}) . ")
             writeCmds(file, cmds, boundedVars)
         end
 
@@ -64,25 +70,29 @@ defmodule GenMcrl2 do
     "_v#{nextId}"
   end
 
-  defp genNetwork(file) do
-    IO.binwrite(file, "  Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;")
+  defp writeNetwork(file) do
+    Helpers.writeLn(file, "Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;", 1)
   end
 
-  defp genInit(file, processes) do
+  defp writeInit(file, processes) do
 
-    IO.binwrite(file, "\ninit\n allow({outgoingMessage, incomingMessage},\n  comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},\n  ")
+    Helpers.writeLn(file, "init", 0)
+    Helpers.writeLn(file, "allow({outgoingMessage, incomingMessage},", 1)
+    Helpers.writeLn(file, "comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},", 2)
     pids = Enum.reduce(processes, %{}, fn p, acc ->
       Map.put(acc, p[:name], :rand.uniform(10000))
     end)
 
+    Helpers.writeLn(file, "", 2, "")
     for p <- processes do
-      IO.binwrite(file, "#{p[:name]}(#{pids[p[:name]]}")
+      Helpers.write(file, "#{p[:name]}(#{pids[p[:name]]}")
       for s <- Map.values(p[:state]) do
-        IO.binwrite(file, ", #{initialState(s, pids)}")
+        Helpers.write(file, ", #{initialState(s, pids)}")
       end
-      IO.binwrite(file, ") || ")
+      Helpers.write(file, ") || ")
     end
-    IO.binwrite(file, "Network\n));")
+    Helpers.write(file, "Network", "\n")
+    Helpers.writeLn(file, "));", 0)
   end
 
   defp initialState(state, pids) do
@@ -95,7 +105,8 @@ defmodule GenMcrl2 do
 
   defp typeToMcrl2(type) do
     case type do
-      {:pid, _} -> "Nat"
+      {:pid, _} -> "Pid"
+      p -> p
     end
   end
 end

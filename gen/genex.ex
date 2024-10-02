@@ -4,12 +4,12 @@ defmodule GenEx do
       {:ok, file} = File.open("#{folder}/#{p[:name]}.ex", [:write])
       writeBlock(file, "defmodule #{p[:name]} do", fn (indent) ->
         writeBlock(file, "def start(#{writeState(p[:state])}) do", fn (indent) ->
-          writeLn(file, "spawn(fn -> loop(#{writeState(p[:state])}) end)", indent)
+          Helpers.writeLn(file, "spawn(fn -> loop(#{writeState(p[:state])}) end)", indent)
         end, indent)
 
         writeBlock(file, "defp loop(#{writeState(p[:state])}) do", fn (indent) ->
           writeCmds(file, p[:run], Map.keys(p[:state]), indent, p[:name])
-          writeLn(file, "loop(#{writeState(p[:state])})", indent)
+          Helpers.writeLn(file, "loop(#{writeState(p[:state])})", indent)
         end, indent)
       end, 0)
 
@@ -41,7 +41,7 @@ defmodule GenEx do
     case cmd do
       {:send, to: to, message: message} ->
         writeLog(file, "#{name}: sending \#{inspect(#{message})} to \#{inspect(#{to})}", indent)
-        writeLn(file, "send(#{to}, {self(), #{message}})", indent)
+        Helpers.writeLn(file, "send(#{to}, {self(), #{message}})", indent)
         writeCmds(file, cmds, boundedVars, indent, name)
       {:receive} ->
         pidVar = getNextVar()
@@ -54,13 +54,13 @@ defmodule GenEx do
         messageVar = getNextVar()
         writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars], indent, name)
       {:receive, from: from, message: m} ->
-        writeLn(file, "receive do", indent)
-        writeLn(file, "{", indent+1, "")
-        if from in boundedVars, do: write(file, "^")
-        write(file, "#{from}, #{m}} ->\n")
-        writeLog(file, "#{name}: received \#{inspect(#{m})} from \#{inspect(#{from})}", indent+2)
-        writeCmds(file, cmds, boundedVars, indent + 2, name)
-        writeLn(file, "end", indent)
+        writeBlock(file, "receive do", fn (indent) ->
+          Helpers.writeLn(file, "{", indent, "")
+          if from in boundedVars, do: Helpers.write(file, "^")
+          Helpers.write(file, "#{from}, #{m}} ->", "\n")
+          writeLog(file, "#{name}: received \#{inspect(#{m})} from \#{inspect(#{from})}", indent + 1)
+          writeCmds(file, cmds, boundedVars, indent + 1, name)
+        end, indent)
     end
   end
 
@@ -68,7 +68,7 @@ defmodule GenEx do
   defp initProcesses(file, [p | processes], initialised, indent) do
     if Enum.all?(Map.values(p[:state]), fn {:pid, name} -> name in initialised; _ -> true end) do
       writeLog(file, "Main: starting #{p[:name]}", indent)
-      writeLn(file, "#{pidName(p[:name])} = #{p[:name]}.start(#{writePidState(p[:state])})", indent)
+      Helpers.writeLn(file, "#{pidName(p[:name])} = #{p[:name]}.start(#{writePidState(p[:state])})", indent)
       writeLog(file, "Main: #{p[:name]} started with PID \#{inspect(#{pidName(p[:name])})}", indent)
       initProcesses(file, processes, [p[:name] | initialised], indent)
     else
@@ -80,28 +80,18 @@ defmodule GenEx do
     String.downcase(name) <> "_pid"
   end
 
-  defp write(file, str, ending \\ "") do
-    IO.binwrite(file, str <> ending)
+  def writeLog(file, str, indent, ending \\ "\n") do
+    Helpers.writeLn(file, "IO.puts(\"#{str}\")", indent, ending)
   end
-  defp writeLn(file, str, indent, ending \\ "\n") do
-    write(file, String.duplicate(" ", indent) <> str, ending)
-  end
-  defp writeLog(file, str, indent, ending \\ "\n") do
-    writeLn(file, "IO.puts(\"#{str}\")", indent, ending)
-  end
+
   defp writeBlock(file, str, child, indent, ending \\ "\n") do
-    writeLn(file, str, indent)
+    Helpers.writeLn(file, str, indent)
     child.(indent + 1)
-    writeLn(file, "end", indent, ending)
+    Helpers.writeLn(file, "end", indent, ending)
   end
 
   defp getNextVar() do
-    if Process.whereis(:randomAgent) == nil do
-      {:ok, randomAgent} = Agent.start_link(fn -> 0 end)
-      Process.register(randomAgent, :randomAgent)
-    end
-
-    nextId = Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)
+    nextId = Helpers.getNextId()
     "v#{nextId}"
   end
 

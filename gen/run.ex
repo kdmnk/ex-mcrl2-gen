@@ -3,6 +3,7 @@ folder = "generated/#{scenario}"
 :ok = File.mkdir_p(folder)
 
 Code.compile_file("conf.ex")
+Code.compile_file("helpers.ex")
 Code.compile_file("genex.ex")
 Code.compile_file("genmcrl2.ex")
 conf = Conf.getConf()[scenario]
