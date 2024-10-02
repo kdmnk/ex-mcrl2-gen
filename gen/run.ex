@@ -8,6 +8,7 @@ Code.compile_file("genmcrl2.ex")
 conf = Conf.getConf()[scenario]
 GenEx.run(folder, conf)
 GenMcrl2.run(folder, conf)
+# add files accordingly
 Code.compile_file("#{folder}/User.ex")
 Code.compile_file("#{folder}/Mach.ex")
 Code.compile_file("#{folder}/Main.ex")

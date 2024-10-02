@@ -1,2 +1,2 @@
-# erlang-with-mcrl2-gen
-Project to generate Erlang code with mcrl2 specification 
+# Ex-Mcrl2-Gen
+Project to generate Elixir code with mcrl2 specification 
