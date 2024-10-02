@@ -8,17 +8,15 @@ defmodule Gen do
       },
       :run => [
         {:send, to: :serverPid, message: 1},
-        {:receive, from: :serverPid, message: 2, child: []}
+        {:receive, from: :serverPid}
       ]
     },
     %{
       :name => "Mach",
       :state => %{},
       :run => [
-        {:receive, message: "m", child: [
-            {:send, to: :p, message: "m+1"}
-        ]},
-
+        {:receive, from: "p", message: "m"},
+        {:send, to: "p", message: "m+1"}
       ]
     }]
 
@@ -36,9 +34,7 @@ defmodule Gen do
         IO.binwrite(file, ", #{s}: #{typeToMcrl2(p[:state][s])}")
       end
       IO.binwrite(file, ") = ")
-      for r <- p[:run] do
-        writeCmd(file, r, ["pid" | Map.keys(p[:state])])
-      end
+      writeCmds(file, p[:run], ["pid" | Map.keys(p[:state])])
       IO.binwrite(file, "#{p[:name]}();\n")
     end
 
@@ -48,25 +44,43 @@ defmodule Gen do
     File.close(file)
   end
 
-  defp writeCmd(file, cmd, boundedVars) do
+  defp writeCmds(_, [], _), do: IO.puts("")
+  defp writeCmds(file, [cmd | cmds], boundedVars) do
     case cmd do
       {:send, to: to, message: message} ->
         IO.binwrite(file, "sendMessage(pid, #{to}, #{message}) . ")
-      {:receive, from: from, message: m, child: child} ->
-        if m in boundedVars || is_number(m) do
-          IO.binwrite(file, "receiveMessage(pid, #{from}, #{m}) . ")
-          for c <- child do
-            writeCmd(file, c, boundedVars)
-          end
-        else
-          IO.binwrite(file, "sum #{m} : MessageType .")
-          writeCmd(file, {:receive, from: from, message: m, child: child}, [m | boundedVars])
+        writeCmds(file, cmds, boundedVars)
+      {:receive, message: m} ->
+        pidVar = getNextVar()
+        IO.binwrite(file, "sum #{pidVar}: Pid . ")
+        writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], [pidVar | boundedVars])
+      {:receive, from: from} ->
+        messageVar = getNextVar()
+        IO.binwrite(file, "sum #{messageVar} : MessageType .")
+        writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars])
+      {:receive, from: from, message: m} ->
+        cond do
+          !(m in boundedVars || is_number(m)) ->
+            IO.binwrite(file, "sum #{m} : MessageType .")
+            writeCmds(file, [{:receive, from: from, message: m} | cmds], [m | boundedVars])
+         !(from in boundedVars) ->
+            IO.binwrite(file, "sum #{from} : Pid .")
+            writeCmds(file, [{:receive, from: from, message: m} | cmds], [from | boundedVars])
+          true ->
+            IO.binwrite(file, "receiveMessage(pid, #{from}, #{m}) . ")
+            writeCmds(file, cmds, boundedVars)
         end
-      {:receive, message: m, child: child} ->
-        IO.binwrite(file, "sum p: Pid . ")
-        writeCmd(file, {:receive, from: "p", message: m, child: child}, ["p" | boundedVars])
 
     end
+  end
+
+  defp getNextVar() do
+    if Process.whereis(:randomAgent) == nil do
+      randomAgent = Agent.start_link(fn -> 0  end)
+      Process.register(randomAgent, :randomAgent)
+    end
+    nextId = Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)
+    "_v#{nextId}"
   end
 
   defp genNetwork(file) do
