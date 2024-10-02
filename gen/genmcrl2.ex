@@ -1,29 +1,6 @@
-defmodule Gen do
+defmodule GenMcrl2 do
   def run() do
-    messageType = :Nat
-    processes = [%{
-      :name => "User",
-      :state => %{
-        :serverPid => {:pid, "Mach"}
-      },
-      :run => [
-        {:send, to: :serverPid, message: 1},
-        {:receive, from: :serverPid}
-      ]
-    },
-    %{
-      :name => "Mach",
-      :state => %{},
-      :run => [
-        {:receive, from: "p", message: "m"},
-        {:send, to: "p", message: "m+1"}
-      ]
-    }]
-
-    gen(processes, messageType)
-  end
-
-  def gen(processes, messageType) do
+    %{:messageType => messageType, :processes => processes} = Conf.getConf()
     {:ok, file} = File.open("gen.mcrl2", [:write])
     IO.binwrite(file, "sort MessageType = #{messageType};\nsort Pid = Nat;")
     IO.binwrite(file, "\nact\n  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;")
