@@ -1,22 +1,22 @@
 defmodule GenEx do
-  def run() do
-    %{:processes => processes} = Conf.getConf()
+  def run(folder, %{:processes => processes}) do
     for p <- processes do
-      {:ok, file} = File.open("#{p[:name]}.ex", [:write])
-      writeLn(file, "defmodule #{p[:name]} do", 0)
-      writeLn(file, "def start(#{writeState(p[:state])}) do", 1)
-      writeLn(file, "spawn(fn -> loop(#{writeState(p[:state])}) end)", 2)
-      writeLn(file, "end", 1)
+      {:ok, file} = File.open("#{folder}/#{p[:name]}.ex", [:write])
+      writeBlock(file, "defmodule #{p[:name]} do", fn (indent) ->
+        writeBlock(file, "def start(#{writeState(p[:state])}) do", fn (indent) ->
+          writeLn(file, "spawn(fn -> loop(#{writeState(p[:state])}) end)", indent)
+        end, indent)
 
-      writeLn(file, "defp loop(#{writeState(p[:state])}) do", 1)
-      writeCmds(file, p[:run], Map.keys(p[:state]), 2, p[:name])
-      writeLn(file, "loop(#{writeState(p[:state])})", 2)
-      writeLn(file, "end", 1)
-      writeLn(file, "end", 0)
+        writeBlock(file, "defp loop(#{writeState(p[:state])}) do", fn (indent) ->
+          writeCmds(file, p[:run], Map.keys(p[:state]), indent, p[:name])
+          writeLn(file, "loop(#{writeState(p[:state])})", indent)
+        end, indent)
+      end, 0)
+
       File.close(file)
     end
 
-    {:ok, file} = File.open("Main.ex", [:write])
+    {:ok, file} = File.open("#{folder}/Main.ex", [:write])
     writeBlock(file, "defmodule Main do", fn (indent) ->
       writeBlock(file, "def run() do", fn (indent) ->
         initProcesses(file, processes, [], indent)
@@ -40,12 +40,16 @@ defmodule GenEx do
   defp writeCmds(file, [cmd | cmds], boundedVars, indent, name) do
     case cmd do
       {:send, to: to, message: message} ->
-        writeLog(file, "#{name}: sending \#{#{message}} to \#{inspect(#{to})}", indent)
+        writeLog(file, "#{name}: sending \#{inspect(#{message})} to \#{inspect(#{to})}", indent)
         writeLn(file, "send(#{to}, {self(), #{message}})", indent)
         writeCmds(file, cmds, boundedVars, indent, name)
+      {:receive} ->
+        pidVar = getNextVar()
+        messageVar = getNextVar()
+        writeCmds(file, [{:receive, from: pidVar, message: messageVar} | cmds], [messageVar | boundedVars], indent, name)
       {:receive, message: m} ->
         pidVar = getNextVar()
-        writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], [pidVar | boundedVars], indent, name)
+        writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], boundedVars, indent, name)
       {:receive, from: from} ->
         messageVar = getNextVar()
         writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars], indent, name)
@@ -54,7 +58,7 @@ defmodule GenEx do
         writeLn(file, "{", indent+1, "")
         if from in boundedVars, do: write(file, "^")
         write(file, "#{from}, #{m}} ->\n")
-        writeLog(file, "#{name}: received \#{#{m}} from \#{inspect(#{from})}", indent+2)
+        writeLog(file, "#{name}: received \#{inspect(#{m})} from \#{inspect(#{from})}", indent+2)
         writeCmds(file, cmds, boundedVars, indent + 2, name)
         writeLn(file, "end", indent)
     end

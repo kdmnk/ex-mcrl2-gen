@@ -1,7 +1,6 @@
 defmodule GenMcrl2 do
-  def run() do
-    %{:messageType => messageType, :processes => processes} = Conf.getConf()
-    {:ok, file} = File.open("gen.mcrl2", [:write])
+  def run(folder, %{:messageType => messageType, :processes => processes}) do
+    {:ok, file} = File.open("#{folder}/specs.mcrl2", [:write])
     IO.binwrite(file, "sort MessageType = #{messageType};\nsort Pid = Nat;")
     IO.binwrite(file, "\nact\n  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;")
     IO.binwrite(file, "\nproc\n")
@@ -27,6 +26,11 @@ defmodule GenMcrl2 do
       {:send, to: to, message: message} ->
         IO.binwrite(file, "sendMessage(pid, #{to}, #{message}) . ")
         writeCmds(file, cmds, boundedVars)
+      {:receive} ->
+        pidVar = getNextVar()
+        messageVar = getNextVar()
+        IO.binwrite(file, "sum #{pidVar}: Pid . sum #{messageVar}: MessageType . ")
+        writeCmds(file, [{:receive, from: pidVar, message: messageVar} | cmds], [messageVar | [pidVar | [boundedVars]]])
       {:receive, message: m} ->
         pidVar = getNextVar()
         IO.binwrite(file, "sum #{pidVar}: Pid . ")
@@ -53,7 +57,7 @@ defmodule GenMcrl2 do
 
   defp getNextVar() do
     if Process.whereis(:randomAgent) == nil do
-      randomAgent = Agent.start_link(fn -> 0  end)
+      {:ok, randomAgent} = Agent.start_link(fn -> 0  end)
       Process.register(randomAgent, :randomAgent)
     end
     nextId = Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)

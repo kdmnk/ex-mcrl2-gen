@@ -5,8 +5,8 @@ defmodule Mach do
  defp loop() do
   receive do
    {p, m} ->
-    IO.puts("Mach: received #{m} from #{inspect(p)}")
-    IO.puts("Mach: sending #{m+1} to #{inspect(p)}")
+    IO.puts("Mach: received #{inspect(m)} from #{inspect(p)}")
+    IO.puts("Mach: sending #{inspect(m+1)} to #{inspect(p)}")
     send(p, {self(), m+1})
   end
   loop()

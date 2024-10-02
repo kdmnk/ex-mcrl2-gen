@@ -3,11 +3,11 @@ sort Pid = Nat;
 act
   sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
 proc
-  User(pid: Pid, serverPid: Nat) = sendMessage(pid, serverPid, 1) . sum _v5 : MessageType .receiveMessage(pid, serverPid, _v5) . User();
+  User(pid: Pid, serverPid: Nat) = sendMessage(pid, serverPid, 1) . sum _v1 : MessageType .receiveMessage(pid, serverPid, _v1) . User();
   Mach(pid: Pid) = sum m : MessageType .sum p : Pid .receiveMessage(pid, p, m) . sendMessage(pid, p, m+1) . Mach();
   Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  User(6539, 4959) || Mach(4959) || Network
+  User(4924, 6737) || Mach(6737) || Network
 ));

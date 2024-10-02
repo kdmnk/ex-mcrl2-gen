@@ -1,0 +1,14 @@
+sort MessageType = Nat;
+sort Pid = Nat;
+act
+  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
+proc
+  User1(pid: Pid, nextPid: Nat) = sendMessage(pid, nextPid, 1) . sum _v3: Pid . sum _v4: MessageType . receiveMessage(pid, _v3, _v4) . User1();
+  User2(pid: Pid, nextPid: Nat) = sum m : MessageType .sum user1 : Pid .receiveMessage(pid, user1, m) . sendMessage(pid, nextPid, user1) . User2();
+  User3(pid: Pid) = sum _v5: Pid . sum m : MessageType .receiveMessage(pid, _v5, m) . sendMessage(pid, m, 2) . User3();
+  Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;
+init
+ allow({outgoingMessage, incomingMessage},
+  comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
+  User1(4733, 2056) || User2(2056, 6904) || User3(6904) || Network
+));
