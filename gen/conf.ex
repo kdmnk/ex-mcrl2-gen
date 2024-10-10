@@ -49,7 +49,7 @@ defmodule Conf do
         :state => %{},
         :run => [
           {:receive, from: "p", message: "m"},
-          {:send, to: "p", message: "m+1"}
+          {:send, to: "p", message: %{:addition => ["m", 1]}}
         ]
       }]
     }
