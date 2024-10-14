@@ -1,25 +1,49 @@
 defmodule Im.DSL.ImExtension do
+  @sendcmd %Spark.Dsl.Entity{
+    name: :snd,
+    describe: "Send command.",
+    target: Im.Commands.Send,
+    args: [:to, :message],
+    schema: [
+      to: [
+        type: {:or, [:atom, :string]}
+      ],
+      message: [
+        type: {:or, [:atom, :string, :integer]}
+      ]
+    ],
+  }
+
+  @receivecmd %Spark.Dsl.Entity{
+    name: :rcv,
+    describe: "Receive command.",
+    target: Im.Commands.Receive,
+    args: [:from, :message],
+    schema: [
+      from: [
+        type: {:or, [:atom, :string]}
+      ],
+      message: [
+        type: {:or, [:atom, :string, :integer]}
+      ]
+    ],
+  }
+
   @process %Spark.Dsl.Entity{
     name: :process,
-    describe: "A process that sends and receives messages.",
-    args: [:identifier],
+    describe: "A process that defines commands.",
+    args: [:identifier, :state],
     target: Im.Process,
     schema: [
       identifier: [
-        type: :string
+        type: :atom
       ],
       state: [
-        type: {:map, :string, {:tuple, [:atom, :string]}},
+        type: {:map, :string, {:tuple, [:atom, :atom]}},
         doc: "State of the process, defined as a map."
-      ],
-      run: [
-        type: {:list, {:or, [
-          {:tuple, [:atom, :keyword_list]},
-        ]}},
-        doc: "List of actions to perform, including send and receive."
       ]
-    ]#
-    #transform: {Im.DSL.Entities.Process, :transform_run, []}
+    ],
+    entities: [run: [@sendcmd, @receivecmd]]
   }
 
   @root %Spark.Dsl.Section{

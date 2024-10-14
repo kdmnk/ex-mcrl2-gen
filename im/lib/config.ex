@@ -4,23 +4,15 @@ defmodule Im.Config do
 
   messageType :Nat
 
-  process "User" do
-    state %{
-      "serverPid" => {:pid, "Mach"}
-    }
-
-    run [
-      {:send, to: "serverPid", message: 1},
-      {:receive, from: "serverPid"}
-    ]
+  process User, %{
+    "server" => {:pid, Mach}
+  } do
+    snd "server", 1
+    rcv "server", 2
   end
 
-  process "Mach" do
-    state %{}
-
-    run [
-      {:receive, from: "p", message: "m"},
-      {:send, to: "p", message: "m+1"}
-    ]
+  process Mach, %{} do
+    snd "m", 1
+    rcv "m", 2
   end
 end
