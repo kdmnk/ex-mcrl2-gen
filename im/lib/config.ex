@@ -4,15 +4,20 @@ defmodule Im.Config do
 
   messageType :Nat
 
-  process User, %{
-    "server" => {:pid, Mach}
-  } do
-    snd "server", 1
-    rcv "server", 2
+  process User, %{} do
+    rcv {"m", "server"} do
+      choice "chooseAnswer" do
+        snd "server", 1
+        snd "server", 2
+      end
+    end
   end
 
-  process Mach, %{} do
-    snd "m", 1
-    rcv "m", 2
+  process Mach, %{"user" => {:pid, User}} do
+    snd "user", 0
+    rcv {"m", "user"} do
+      match 1, do: (snd "user", 3)
+      match 2, do: (snd "user", 4)
+    end
   end
 end

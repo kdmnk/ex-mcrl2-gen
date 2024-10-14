@@ -1,3 +1,3 @@
 defmodule Im.Commands.Receive do
-  defstruct [:from, :message]
+  defstruct [:value, :from, :body]
 end
