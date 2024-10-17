@@ -84,7 +84,7 @@ defmodule Im.Gen.GenMcrl2 do
 
     Im.Gen.Helpers.writeLn(file, "", 2, "")
     for p <- processes do
-      Im.Gen.Helpers.write(file, "#{p.identifier}(#{pids[p.identifier]}")
+      Im.Gen.Helpers.write(file, "#{Im.Process.cleanedIdentifier(p)}(#{pids[p.identifier]}")
       for s <- Map.values(p.state) do
         Im.Gen.Helpers.write(file, ", #{initialState(s, pids)}")
       end

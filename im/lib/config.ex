@@ -4,16 +4,17 @@ defmodule Im.Config do
 
   #variables
   user = :user
+  server = :server
   m = :m
 
   messageType :Nat
 
   process User, %{} do
-    rcv m do
-      ifcond true do
+    rcv {m, server} do
+      ifcond m == 1 do
         choice "chooseAnswer" do
-          snd "server", 1
-          snd "server", 3
+          snd server, 2
+          snd server, 3
         end
       end
     end

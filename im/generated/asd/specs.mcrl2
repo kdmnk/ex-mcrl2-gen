@@ -3,31 +3,31 @@ sort Pid = Nat;
 act
  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
 proc
- Elixir.User(pid: Pid) = 
-  (receiveMessage(pid, , m) .
-   some condition -> (
-     sendMessage(pid, server, 1)
+ User(pid: Pid) = 
+  (sum server : Pid . sum m : MessageType . receiveMessage(pid, m, server) .
+   (m == 1) -> (
+     sendMessage(pid, server, 2)
      +
      sendMessage(pid, server, 3)
    )
   ) .
-  Elixir.User();
- Elixir.Mach(user: Pid, pid: Pid) = 
+  User();
+ Mach(user: Pid, pid: Pid) = 
   sendMessage(pid, user, 1)
   .
-  (receiveMessage(pid, user, m) .
-   some condition -> (
+  (sum m : MessageType . receiveMessage(pid, m, user) .
+   (m == 2) -> (
     sendMessage(pid, user, 3)
    )
    +
-   some condition -> (
+   (m == 3) -> (
     sendMessage(pid, user, 4)
    )
   ) .
-  Elixir.Mach();
+  Mach();
  Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  Elixir.User(5339) || Elixir.Mach(5998, 5339) || Network
+  User(8677) || Mach(9751, 8677) || Network
 ));
