@@ -1,23 +1,29 @@
 defmodule Im.Config do
-  use Im.DSL.Im,
-    extensions: [Im.DSL.ImExtension]
+  use Im.Dsl.Im,
+    extensions: [Im.Dsl.Root]
+
+  #variables
+  user = :user
+  m = :m
 
   messageType :Nat
 
   process User, %{} do
-    rcv {"m", "server"} do
-      choice "chooseAnswer" do
-        snd "server", 1
-        snd "server", 2
+    rcv m do
+      ifcond true do
+        choice "chooseAnswer" do
+          snd "server", 1
+          snd "server", 3
+        end
       end
     end
   end
 
-  process Mach, %{"user" => {:pid, User}} do
-    snd "user", 0
-    rcv {"m", "user"} do
-      match 1, do: (snd "user", 3)
-      match 2, do: (snd "user", 4)
+  process Mach, %{user => {:pid, User}} do
+    snd user, 1
+    rcv {m, user} do
+      ifcond m == 2, do: (snd user, 3)
+      ifcond m == 3, do: (snd user, 4)
     end
   end
 end
