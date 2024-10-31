@@ -3,31 +3,52 @@ sort Pid = Nat;
 act
  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
 proc
- User(pid: Pid) = 
-  (sum server : Pid . sum m : MessageType . receiveMessage(pid, m, server) .
-   (m == 1) -> (
-     sendMessage(pid, server, 2)
-     +
-     sendMessage(pid, server, 3)
-   )
-  ) .
-  User();
- Mach(user: Pid, pid: Pid) = 
-  sendMessage(pid, user, 1)
+ User1(pid: Pid) = 
+  sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
+    tau .
+    sendMessage(pid, server, 1)
+    + tau .
+    sendMessage(pid, server, 2)
+  +
+  sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
+   sendMessage(pid, server, 4)
+  +
+  sum server : Pid . sum m : MessageType . (m == 5) -> receiveMessage(pid, server, m) . 
+   sendMessage(pid, server, 4)
+  . User1();
+ User2(pid: Pid) = 
+  sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
+    tau .
+    sendMessage(pid, server, 1)
+    + tau .
+    sendMessage(pid, server, 2)
+  +
+  sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
+   sendMessage(pid, server, 4)
+  +
+  sum server : Pid . sum m : MessageType . (m == 5) -> receiveMessage(pid, server, m) . 
+   sendMessage(pid, server, 4)
+  . User2();
+ Mach(pid: Pid, user1: Pid, user2: Pid) = 
+  sendMessage(pid, user1, 0)
   .
-  (sum m : MessageType . receiveMessage(pid, m, user) .
-   (m == 2) -> (
-    sendMessage(pid, user, 3)
-   )
-   +
-   (m == 3) -> (
-    sendMessage(pid, user, 4)
-   )
-  ) .
-  Mach();
+  sendMessage(pid, user2, 0)
+  .
+  sum some_user : Pid . sum m : MessageType . (m == 1) -> receiveMessage(pid, some_user, m) . 
+   sendMessage(pid, user1, 3)
+   .
+   sendMessage(pid, user2, 3)
+  +
+  sum some_user : Pid . sum m : MessageType . (m == 2) -> receiveMessage(pid, some_user, m) . 
+   sendMessage(pid, user1, 5)
+   .
+   sendMessage(pid, user2, 5)
+  .
+  sum some_user : Pid . sum m : MessageType . (true) -> receiveMessage(pid, some_user, m) . 
+  . Mach();
  Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  User(8677) || Mach(9751, 8677) || Network
+  User1(5748) || User2(6136) || Mach(2336, 5748, 6136) || Network
 ));

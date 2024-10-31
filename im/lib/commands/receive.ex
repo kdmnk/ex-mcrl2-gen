@@ -1,8 +1,39 @@
 defmodule Im.Commands.Receive do
-  defstruct [:value, :from, :body]
+  defstruct [:value, :from, :body, :rec]
 
-  def writeMcrl2(%Im.Commands.Receive{} = cmd, %Im.Gen.GenState{} = state) do
+  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
+    {newState, newCmd} = boundNewVariables(state, cmd)
 
+    GenEx.writeBlock(newState, "receive do", fn s ->
+      Enum.map(cmd.body, fn c ->
+        Im.Gen.Helpers.writeLn(s, "{", 0, "")
+        if newCmd.from in state.bounded_vars, do: Im.Gen.Helpers.write(s, "^")
+        Im.Gen.Helpers.write(s, "#{newCmd.from}, #{newCmd.value}} ")
+        Im.Commands.IfCond.writeErl(Im.Gen.GenState.indent(s), c, "received \#{inspect(#{newCmd.value})} from \#{inspect(#{newCmd.from})}")
+      end)
+    end)
+  end
+
+  def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
+    {newState, newCmd} = boundNewVariables(state, cmd)
+
+    caseString = fn (condition) ->
+      Im.Gen.Helpers.writeLn(state, buildCmdString(state, newCmd, condition))
+    end
+
+    Im.Gen.Helpers.join(
+      state,
+      fn (caseCmd) ->
+        caseString.(Im.Commands.IfCond.stringifyAST(caseCmd.condition))
+        Im.Gen.GenMcrl2.writeCmds(%{newState | indentation: state.indentation+1}, caseCmd.body)
+      end,
+      cmd.body,
+      "+"
+    )
+
+  end
+
+  def boundNewVariables(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
     value = if cmd.value == nil do
       "val#{Im.Gen.Helpers.getNextId()}"
     else
@@ -15,35 +46,23 @@ defmodule Im.Commands.Receive do
       cmd.from
     end
 
-    Im.Gen.Helpers.writeLn(state, "(" <> buildCmdString(from, value, state.bounded_vars))
-
-    # Body can only be IfCond
-    writeBody(%{state |
-      indentation: state.indentation+1,
-      bounded_vars: [value | [from | state.bounded_vars]]
-    }, cmd.body)
-
-    Im.Gen.Helpers.writeLn(state, ") .")
+    {%{state | bounded_vars: [value | [from | state.bounded_vars]]}, %{cmd | value: value, from: from}}
   end
 
-  def buildCmdString(from, value, bounded_vars) do
-    cond do
-      from not in bounded_vars ->
-        "sum #{from} : Pid . " <> buildCmdString(from, value, [from | bounded_vars])
-      value not in bounded_vars ->
-        "sum #{value} : MessageType . " <> buildCmdString(from, value, [value | bounded_vars])
-      true ->
-        "receiveMessage(pid, #{value}, #{from}) ."
+  def buildCmdString(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd, condition) do
+    boundFrom = if cmd.from not in state.bounded_vars do
+        "sum #{cmd.from} : Pid . "
+    else
+      ""
     end
-  end
 
-  def writeBody(state, [cmd | []]) do
-    Im.Commands.writeMcrl2(cmd, state)
-  end
-  def writeBody(state, [cmd | cmds]) do
-    Im.Commands.writeMcrl2(cmd, state)
-    Im.Gen.Helpers.writeLn(state, "+")
-    writeBody(state, cmds)
+    boundValue = if cmd.value not in state.bounded_vars do
+      "sum #{cmd.value} : MessageType . "
+    else
+      ""
+    end
+
+    "#{boundFrom}#{boundValue}(#{condition}) -> receiveMessage(pid, #{cmd.from}, #{cmd.value}) . "
   end
 
 end

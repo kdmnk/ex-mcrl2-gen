@@ -2,12 +2,17 @@ defmodule Im.Commands.IfCond do
   defstruct [:condition, :body]
 
 
-  def writeMcrl2(%Im.Commands.IfCond{} = cmd, %Im.Gen.GenState{} = state) do
-    Im.Gen.Helpers.writeLn(state, "(#{stringifyAST(cmd.condition)}) -> (")
+  def writeErl(%Im.Gen.GenState{} = state, %Im.Commands.IfCond{} = cmd, log) do
+    Im.Gen.Helpers.write(state, "when #{stringifyAST(cmd.condition)} ->", "\n")
 
-    Enum.map(cmd.body, fn (cmd) ->
-      Im.Commands.writeMcrl2(cmd, %{state | indentation: state.indentation+1})
-    end)
+    newState = Im.Gen.GenState.indent(state)
+    GenEx.writeLog(newState, log <> " and '#{stringifyAST(cmd.condition)}' holds", 0)
+    GenEx.writeCmds(newState, cmd.body)
+  end
+
+  def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.IfCond{} = cmd) do
+    Im.Gen.Helpers.writeLn(state, "(#{stringifyAST(cmd.condition)}) -> (")
+    Im.Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.body)
     Im.Gen.Helpers.writeLn(state, ")")
   end
 

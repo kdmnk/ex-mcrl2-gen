@@ -1,100 +1,68 @@
 defmodule GenEx do
+  def main() do
+    folder = "./generated/asd"
+    :ok = File.mkdir_p(folder)
 
+    conf = Conf.getConf()["asd"]
+    run(folder, conf)
+  end
 
   def run(folder, %{:processes => processes}) do
     for p <- processes do
-      {:ok, file} = File.open("#{folder}/#{p[:name]}.ex", [:write])
-      writeBlock(file, "defmodule #{p[:name]} do", fn (indent) ->
-        writeBlock(file, "def start(#{writeState(p[:state])}) do", fn (indent) ->
-          Helpers.writeLn(file, "spawn(fn -> loop(#{writeState(p[:state])}) end)", indent)
-        end, indent)
-
-        writeBlock(file, "defp loop(#{writeState(p[:state])}) do", fn (indent) ->
-          writeCmds(file, p[:run], Map.keys(p[:state]), indent, p[:name])
-          Helpers.writeLn(file, "loop(#{writeState(p[:state])})", indent)
-        end, indent)
-      end, 0)
-
-      File.close(file)
+      state = Im.Gen.GenState.new("#{folder}/#{p.identifier}.ex")
+      Im.Process.writeEx(state, p)
+      File.close(state.file)
     end
 
-    {:ok, file} = File.open("#{folder}/Main.ex", [:write])
-    writeBlock(file, "defmodule Main do", fn (indent) ->
-      writeBlock(file, "def run() do", fn (indent) ->
-        initProcesses(file, processes, [], indent)
-      end, indent)
-    end, 0)
+    state = Im.Gen.GenState.new("#{folder}/Main.ex")
+    writeBlock(state, "defmodule Main do", fn s ->
+      writeBlock(s, "def run() do", fn s ->
+        initProcesses(s, processes, [])
+      end)
 
-
+      choices = Im.Gen.Helpers.getNonDeterministicChoices()
+      Enum.map(choices, fn c ->
+        writeBlock(s, "def #{c}(module, state) do", fn s ->
+          Im.Gen.Helpers.writeLn(s, "#TODO: return value")
+          Im.Gen.Helpers.writeLn(s, "true")
+        end)
+      end)
+    end)
   end
 
-  defp writeState(state) do
-    Map.keys(state) |> Enum.join(", ")
-  end
-
-  defp writePidState(state) do
-    Map.values(state)
-    |> Enum.map(fn {:pid, name} -> pidName(name) end)
-    |> Enum.join(", ")
-  end
-
-  defp writeCmds(_, [], _, _, _), do: IO.puts("")
-  defp writeCmds(file, [cmd | cmds], boundedVars, indent, name) do
+  def writeCmds(_, []), do: IO.puts("")
+  def writeCmds(state, [cmd | cmds]) do
     case cmd do
-      {:send, to: to, message: message} ->
-        writeLog(file, "#{name}: sending \#{inspect(#{message})} to \#{inspect(#{to})}", indent)
-        Helpers.writeLn(file, "send(#{to}, {self(), #{message}})", indent)
-        writeCmds(file, cmds, boundedVars, indent, name)
-      {:receive} ->
-        pidVar = getNextVar()
-        messageVar = getNextVar()
-        writeCmds(file, [{:receive, from: pidVar, message: messageVar} | cmds], [messageVar | boundedVars], indent, name)
-      {:receive, message: m} ->
-        pidVar = getNextVar()
-        writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], boundedVars, indent, name)
-      {:receive, from: from} ->
-        messageVar = getNextVar()
-        writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars], indent, name)
-      {:receive, from: from, message: m} ->
-        writeBlock(file, "receive do", fn (indent) ->
-          Helpers.writeLn(file, "{", indent, "")
-          if from in boundedVars, do: Helpers.write(file, "^")
-          Helpers.write(file, "#{from}, #{m}} ->", "\n")
-          writeLog(file, "#{name}: received \#{inspect(#{m})} from \#{inspect(#{from})}", indent + 1)
-          writeCmds(file, cmds, boundedVars, indent + 1, name)
-        end, indent)
+      %Im.Commands.Send{} ->
+        Im.Commands.Send.writeEx(state, cmd)
+      %Im.Commands.Receive{} ->
+        Im.Commands.Receive.writeEx(state, cmd)
+      %Im.Commands.Choice{} ->
+        Im.Commands.Choice.writeEx(state, cmd)
     end
+    writeCmds(state, cmds)
   end
 
-  defp initProcesses(_, [], _,  _), do: IO.puts("")
-  defp initProcesses(file, [p | processes], initialised, indent) do
-    if Enum.all?(Map.values(p[:state]), fn {:pid, name} -> name in initialised; _ -> true end) do
-      writeLog(file, "Main: starting #{p[:name]}", indent)
-      Helpers.writeLn(file, "#{pidName(p[:name])} = #{p[:name]}.start(#{writePidState(p[:state])})", indent)
-      writeLog(file, "Main: #{p[:name]} started with PID \#{inspect(#{pidName(p[:name])})}", indent)
-      initProcesses(file, processes, [p[:name] | initialised], indent)
+  defp initProcesses(_, [], _), do: IO.puts("")
+  defp initProcesses(state, [p | processes], initialised) do
+    state = %{state | module_name: "Main"}
+    if Enum.all?(Keyword.values(p.state), fn {:pid, name} -> String.replace_prefix(to_string(name), "Elixir.", "") in initialised; _ -> true end) do
+      writeLog(state, "starting #{p.identifier}")
+      Im.Gen.Helpers.writeLn(state, "#{Im.Gen.Helpers.pidName(p.identifier)} = #{p.identifier}.start(#{Im.Process.statePidNamesStr(p)})")
+      writeLog(state, "#{p.identifier} started with PID \#{inspect(#{Im.Gen.Helpers.pidName(p.identifier)})}")
+      initProcesses(state, processes, [p.identifier | initialised])
     else
-      initProcesses(file, processes ++ [p], initialised, indent)
+      initProcesses(state, processes ++ [p], initialised)
     end
   end
 
-  defp pidName(name) do
-    String.downcase(name) <> "_pid"
+  def writeLog(%Im.Gen.GenState{} = state, str, indentation \\ 0) do
+    Im.Gen.Helpers.writeLn(state, "IO.puts(\"#{state.module_name}: #{str}\")", indentation)
   end
 
-  def writeLog(file, str, indent, ending \\ "\n") do
-    Helpers.writeLn(file, "IO.puts(\"#{str}\")", indent, ending)
+  def writeBlock(%Im.Gen.GenState{} = state, str, child) do
+    Im.Gen.Helpers.writeLn(state, str)
+    child.(Im.Gen.GenState.indent(state))
+    Im.Gen.Helpers.writeLn(state, "end")
   end
-
-  defp writeBlock(file, str, child, indent, ending \\ "\n") do
-    Helpers.writeLn(file, str, indent)
-    child.(indent + 1)
-    Helpers.writeLn(file, "end", indent, ending)
-  end
-
-  defp getNextVar() do
-    nextId = Helpers.getNextId()
-    "v#{nextId}"
-  end
-
 end

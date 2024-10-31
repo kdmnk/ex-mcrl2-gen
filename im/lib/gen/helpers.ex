@@ -8,9 +8,9 @@ defmodule Im.Gen.Helpers do
   end
 
   def getState(state) do
-    extState = Map.put(state, "pid", "Pid") # add own pid
+    extState = Keyword.put(state, :pid, "Pid") # add own pid
     extState
-    |> Map.keys()
+    |> Keyword.keys()
     |> Enum.map(fn s -> "#{s}: #{typeToMcrl2(extState[s])}" end)
     |> Enum.join(", ")
   end
@@ -22,6 +22,40 @@ defmodule Im.Gen.Helpers do
     end
 
     Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)
+  end
+
+  def addNonDeterministicChoice(choice) do
+    if Process.whereis(:choiceAgent) == nil do
+      {:ok, choiceAgent} = Agent.start_link(fn -> [] end)
+      Process.register(choiceAgent, :choiceAgent)
+    end
+
+    Agent.update(:choiceAgent, fn choices -> [choice | choices] end)
+  end
+
+  def getNonDeterministicChoices() do
+    if Process.whereis(:choiceAgent) == nil do
+      {:ok, choiceAgent} = Agent.start_link(fn -> [] end)
+      Process.register(choiceAgent, :choiceAgent)
+    end
+
+    Agent.get(:choiceAgent, fn i -> i end)
+  end
+
+  def pidName(name) do
+    cleaned = String.replace_prefix(to_string(name), "Elixir.", "")
+    String.downcase("#{cleaned}") <> "_pid"
+  end
+
+  def join(state, callback, list, separator \\ ".")
+  def join(_, _, [], _), do: ""
+  def join(_, callback, [l | []], _) do
+    callback.(l)
+  end
+  def join(state, callback, [l | ls], separator) do
+    callback.(l)
+    Im.Gen.Helpers.writeLn(state, separator)
+    join(state, callback, ls, separator)
   end
 
   defp typeToMcrl2(type) do

@@ -26,48 +26,13 @@ defmodule Im.Gen.GenMcrl2 do
   end
 
 
-
-
-  # defp writeCmds(_, [], _), do: IO.puts("")
-  # defp writeCmds(file, [cmd | cmds], boundedVars) do
-  #   case cmd do
-  #     {:receive} ->
-  #       pidVar = getNextVar()
-  #       messageVar = getNextVar()
-  #       Helpers.write(file, "sum #{pidVar}: Pid . sum #{messageVar}: MessageType . ")
-  #       writeCmds(file, [{:receive, from: pidVar, message: messageVar} | cmds], [messageVar | [pidVar | [boundedVars]]])
-  #     {:receive, message: m} ->
-  #       pidVar = getNextVar()
-  #       Helpers.write(file, "sum #{pidVar}: Pid . ")
-  #       writeCmds(file, [{:receive, from: pidVar, message: m} | cmds], [pidVar | boundedVars])
-  #     {:receive, from: from} ->
-  #       messageVar = getNextVar()
-  #       Helpers.write(file, "sum #{messageVar} : MessageType .")
-  #       writeCmds(file, [{:receive, from: from, message: messageVar} | cmds], [messageVar | boundedVars])
-  #     {:receive, from: from, message: m} ->
-  #       cond do
-  #         !(m in boundedVars || is_number(m)) ->
-  #           Helpers.write(file, "sum #{m} : MessageType .")
-  #           writeCmds(file, [{:receive, from: from, message: m} | cmds], [m | boundedVars])
-  #        !(from in boundedVars) ->
-  #           Helpers.write(file, "sum #{from} : Pid .")
-  #           writeCmds(file, [{:receive, from: from, message: m} | cmds], [from | boundedVars])
-  #         true ->
-  #           Helpers.write(file, "receiveMessage(pid, #{from}, #{m}) . ")
-  #           writeCmds(file, cmds, boundedVars)
-  #       end
-
-  #   end
-  # end
-
-  defp getNextVar() do
-    if Process.whereis(:randomAgent) == nil do
-      {:ok, randomAgent} = Agent.start_link(fn -> 0  end)
-      Process.register(randomAgent, :randomAgent)
-    end
-    nextId = Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)
-    "_v#{nextId}"
-  end
+  def writeCmds(state, cmds, separator \\ "."), do:
+    Im.Gen.Helpers.join(
+      state,
+      fn (cmd) -> Im.Commands.writeMcrl2(state, cmd) end,
+      cmds,
+      separator
+    )
 
   defp writeNetwork(state) do
     Im.Gen.Helpers.writeLn(state, "Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;", 1)
@@ -84,8 +49,8 @@ defmodule Im.Gen.GenMcrl2 do
 
     Im.Gen.Helpers.writeLn(file, "", 2, "")
     for p <- processes do
-      Im.Gen.Helpers.write(file, "#{Im.Process.cleanedIdentifier(p)}(#{pids[p.identifier]}")
-      for s <- Map.values(p.state) do
+      Im.Gen.Helpers.write(file, "#{p.identifier}(#{pids[p.identifier]}")
+      for s <- Keyword.values(p.state) do
         Im.Gen.Helpers.write(file, ", #{initialState(s, pids)}")
       end
       Im.Gen.Helpers.write(file, ") || ")
@@ -100,7 +65,5 @@ defmodule Im.Gen.GenMcrl2 do
       p -> p
     end
   end
-
-
 
 end
