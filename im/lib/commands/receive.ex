@@ -1,5 +1,5 @@
 defmodule Im.Commands.Receive do
-  defstruct [:value, :from, :body, :rec]
+  defstruct [:value, :from, :body]
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
     {newState, newCmd} = boundNewVariables(state, cmd)

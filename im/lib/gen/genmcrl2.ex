@@ -13,6 +13,7 @@ defmodule Im.Gen.GenMcrl2 do
     IO.inspect(state.indentation)
     Im.Gen.Helpers.writeLn(state, "sort MessageType = #{messageType};")
     Im.Gen.Helpers.writeLn(state, "sort Pid = Nat;")
+    Im.Gen.Helpers.writeLn(state, "sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);")
     Im.Gen.Helpers.writeLn(state, "act")
     Im.Gen.Helpers.writeLn(state, "sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;", +1)
     Im.Gen.Helpers.writeLn(state, "proc")
@@ -35,7 +36,12 @@ defmodule Im.Gen.GenMcrl2 do
     )
 
   defp writeNetwork(state) do
-    Im.Gen.Helpers.writeLn(state, "Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;", 1)
+    Im.Gen.Helpers.writeLn(state, "Network(msgs: FSet(Message)) =", 1)
+    Im.Gen.Helpers.writeLn(state, "sum sender : Pid,  receiver : Pid, msg: MessageType . networkReceiveMessage(sender, receiver, msg)", 2)
+    Im.Gen.Helpers.writeLn(state, ". Network(msgs = msgs + {Message(sender, receiver, msg)})", 2)
+    Im.Gen.Helpers.writeLn(state, "+", 2)
+    Im.Gen.Helpers.writeLn(state, "sum msg: Message . (msg in msgs) -> networkSendMessage(receiverID(msg), senderID(msg), message(msg))", 2)
+    Im.Gen.Helpers.writeLn(state, "  Network(msgs = msgs - {msg});", 2)
   end
 
   defp writeInit(file, processes) do
@@ -55,7 +61,7 @@ defmodule Im.Gen.GenMcrl2 do
       end
       Im.Gen.Helpers.write(file, ") || ")
     end
-    Im.Gen.Helpers.write(file, "Network", "\n")
+    Im.Gen.Helpers.write(file, "Network({})", "\n")
     Im.Gen.Helpers.writeLn(file, "));", 0)
   end
 

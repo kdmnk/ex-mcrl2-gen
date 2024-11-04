@@ -1,5 +1,6 @@
 sort MessageType = Nat;
 sort Pid = Nat;
+sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);
 act
  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
 proc
@@ -43,12 +44,15 @@ proc
    sendMessage(pid, user1, 5)
    .
    sendMessage(pid, user2, 5)
-  .
-  sum some_user : Pid . sum m : MessageType . (true) -> receiveMessage(pid, some_user, m) . 
   . Mach();
- Network = sum msg, p1, p2: Nat . networkReceiveMessage(p1, p2, msg) . networkSendMessage(p2, p1, msg) . Network() ;
+ Network(msgs: FSet(Message)) =
+  sum sender : Pid,  receiver : Pid, msg: MessageType . networkReceiveMessage(sender, receiver, msg)
+  . Network(msgs = msgs + {Message(sender, receiver, msg)})
+  +
+  sum msg: Message . (msg in msgs) -> networkSendMessage(receiverID(msg), senderID(msg), message(msg))
+  . Network(msgs = msgs - {msg});
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  User1(5748) || User2(6136) || Mach(2336, 5748, 6136) || Network
+  User1(1968) || User2(3579) || Mach(2175, 1968, 3579) || Network({})
 ));
