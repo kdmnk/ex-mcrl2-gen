@@ -10,7 +10,10 @@ defmodule Im.Dsl.SubProcess do
         doc: "Name of the subprocess"
       ],
       arg: [
-        type: {:list, :atom},
+        type: {:map, :atom, {:or, [
+          {:tuple, [:atom, :atom]},
+          :atom
+          ]}},
         doc: "Argument list",
       ]
     ],
@@ -21,6 +24,16 @@ defmodule Im.Dsl.SubProcess do
       Im.Dsl.Entities.ChoiceCmd.cmd,
       Im.Dsl.Entities.CallCmd.cmd
     ]],
+    transform: {__MODULE__, :transform_run, []}
   }
+
+  @spec transform_run(__MODULE__) :: {:ok, __MODULE__}
+  def transform_run(entity) do
+    state = Enum.map(entity.arg, fn
+      {name, {:pid, pidName}} -> {name, {:pid, String.replace_prefix(to_string(pidName), "Elixir.", "")}}
+      v -> v
+    end)
+    {:ok, %{entity | arg: state}}
+  end
 
 end

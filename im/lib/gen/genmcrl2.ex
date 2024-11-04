@@ -47,7 +47,7 @@ defmodule Im.Gen.GenMcrl2 do
     Im.Gen.Helpers.writeLn(state, ". Network(msgs = msgs + {Message(sender, receiver, msg)})", 2)
     Im.Gen.Helpers.writeLn(state, "+", 2)
     Im.Gen.Helpers.writeLn(state, "sum msg: Message . (msg in msgs) -> networkSendMessage(receiverID(msg), senderID(msg), message(msg))", 2)
-    Im.Gen.Helpers.writeLn(state, "  Network(msgs = msgs - {msg});", 2)
+    Im.Gen.Helpers.writeLn(state, ". Network(msgs = msgs - {msg});", 2)
   end
 
   defp writeInit(file, processes) do
@@ -81,7 +81,9 @@ defmodule Im.Gen.GenMcrl2 do
   def stringifyAST(ast) do
     case ast do
       {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
+      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left)} #{op} #{stringifyAST(right)})"
       [{:|, _pos, [left, right]}] -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
+      {:!, _pos, right} -> "!#{stringifyAST(right)}"
       {var, _pos, nil} -> var
       var when is_atom(var) -> var
       int when is_integer(int) -> int

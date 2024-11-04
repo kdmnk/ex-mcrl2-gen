@@ -4,11 +4,13 @@ defmodule Im.SubProcess do
 
   def writeMcrl2(%Im.SubProcess{} = p, state) do
 
-    args = Enum.join(p.arg, ", ")
+    args = Im.Gen.Helpers.getState(p.arg)
 
     Im.Gen.Helpers.writeLn(state, "#{p.name}(#{args}) = ")
 
     Im.Gen.GenMcrl2.writeCmds(Im.Gen.GenState.indent(state), p.run)
+
+    Im.Gen.Helpers.writeLn(state, ";")
   end
 
   # def writeEx(%Im.Gen.GenState{} = state, %Im.Process{} = p) do

@@ -8,6 +8,7 @@ defmodule Im.Gen.Helpers do
   end
 
   def getState(state) do
+    IO.inspect(state)
     extState = Keyword.put(state, :pid, "Pid") # add own pid
     extState
     |> Keyword.keys()
@@ -61,6 +62,7 @@ defmodule Im.Gen.Helpers do
   defp typeToMcrl2(type) do
     case type do
       {:pid, _} -> "Pid"
+      {:list, type} -> "List(#{type})"
       p -> p
     end
   end

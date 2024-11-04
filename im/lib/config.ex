@@ -57,32 +57,32 @@ defmodule Im.Config do
   process Mach, %{user1 => {:pid, User1}, user2 => {:pid, User2}} do
     snd user1, commitRequest
     snd user2, commitRequest
-    call "receiveMessages", [[], 2]
+    call "receiveMessages", [user1, user2, [], 2]
   end
 
-  subprocess "receiveMessages", [:msgs, :remaining] do
+  subprocess "receiveMessages", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}, :remaining => :Int} do
     ifcond remaining == 0 do
-      call "processAck", [:msgs]
+      call "processAck", [:user1, :user2, :msgs]
     end
     ifcond remaining > 0 do
-      call "receiveMessage", [:msgs, :remaining]
+      call "receiveMsg", [:user1, :user2, :msgs, :remaining]
     end
   end
 
-  subprocess "receiveMessage", [:msgs, :remaining] do
+  subprocess "receiveMsg", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}, :remaining => :Int} do
     rcv {m, some_user} do
       ifcond true do
-        call "receiveMessages", [[m | :msgs], :remaining-1]
+        call "receiveMessages", [:user1, :user2, [m | :msgs], :remaining-1]
       end
     end
   end
 
-  subprocess "processAck", [:msgs] do
+  subprocess "processAck", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}} do
     ifcond 2 in msgs do
       snd user1, rollback
       snd user2, rollback
     end
-    ifcond true do
+    ifcond !(2 in msgs) do
       snd user1, commitMessage
       snd user2, commitMessage
     end

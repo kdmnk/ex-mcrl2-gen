@@ -4,7 +4,7 @@ defmodule Im.Commands.Call do
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Call{} = cmd) do
     args = Enum.map(cmd.arg, fn x -> Im.Gen.GenMcrl2.stringifyAST(x) end)
 
-    Im.Gen.Helpers.writeLn(state, "#{cmd.name}(#{Enum.join(args, ", ")})")
+    Im.Gen.Helpers.writeLn(state, "#{cmd.name}(pid, #{Enum.join(args, ", ")})")
   end
 
   # def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
