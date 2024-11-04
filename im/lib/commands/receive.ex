@@ -24,7 +24,7 @@ defmodule Im.Commands.Receive do
     Im.Gen.Helpers.join(
       state,
       fn (caseCmd) ->
-        caseString.(Im.Commands.IfCond.stringifyAST(caseCmd.condition))
+        caseString.(Im.Gen.GenMcrl2.stringifyAST(caseCmd.condition))
         Im.Gen.GenMcrl2.writeCmds(%{newState | indentation: state.indentation+1}, caseCmd.body)
       end,
       cmd.body,

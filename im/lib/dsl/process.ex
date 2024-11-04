@@ -16,7 +16,9 @@ defmodule Im.Dsl.Process do
     entities: [run: [
       Im.Dsl.Entities.ReceiveCmd.cmd,
       Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.ChoiceCmd.cmd
+      Im.Dsl.Entities.ChoiceCmd.cmd,
+      Im.Dsl.Entities.CallCmd.cmd,
+      Im.Dsl.Entities.IfCondCmd.cmd
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

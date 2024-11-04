@@ -18,10 +18,16 @@ defmodule Im.Gen.GenMcrl2 do
     Im.Gen.Helpers.writeLn(state, "sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;", +1)
     Im.Gen.Helpers.writeLn(state, "proc")
     processes
-    |> Enum.map(fn (x) -> Im.Process.writeMcrl2(x, %{state | indentation: state.indentation+1}) end)
+    |> Enum.map(fn
+      (%Im.Process{} = x) -> Im.Process.writeMcrl2(x, %{state | indentation: state.indentation+1})
+      (%Im.SubProcess{} = x) -> Im.SubProcess.writeMcrl2(x, %{state | indentation: state.indentation+1})
+    end)
 
     writeNetwork(state)
-    writeInit(state, processes)
+    writeInit(state, Enum.filter(processes, fn
+      (%Im.Process{}) -> true
+      _ -> false
+      end))
 
     File.close(state.file)
   end
@@ -69,6 +75,17 @@ defmodule Im.Gen.GenMcrl2 do
     case state do
       {:pid, p} -> pids[p]
       p -> p
+    end
+  end
+
+  def stringifyAST(ast) do
+    case ast do
+      {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
+      [{:|, _pos, [left, right]}] -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
+      {var, _pos, nil} -> var
+      var when is_atom(var) -> var
+      int when is_integer(int) -> int
+      [] -> "[]"
     end
   end
 

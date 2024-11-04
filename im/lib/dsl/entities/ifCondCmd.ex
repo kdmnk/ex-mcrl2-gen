@@ -13,6 +13,7 @@ defmodule Im.Dsl.Entities.IfCondCmd do
     entities: [body: [
       Im.Dsl.Entities.SendCommand.cmd,
       Im.Dsl.Entities.ChoiceCmd.cmd,
+      Im.Dsl.Entities.CallCmd.cmd
     ]]
   }
 

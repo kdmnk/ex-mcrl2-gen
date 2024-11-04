@@ -8,7 +8,6 @@ defmodule Im.Config do
   some_user = :some_user
   server = :server
   m = :m
-  m2 = :m
 
   commitRequest = 0
   yesResponse = 1
@@ -58,20 +57,34 @@ defmodule Im.Config do
   process Mach, %{user1 => {:pid, User1}, user2 => {:pid, User2}} do
     snd user1, commitRequest
     snd user2, commitRequest
+    call "receiveMessages", [[], 2]
+  end
+
+  subprocess "receiveMessages", [:msgs, :remaining] do
+    ifcond remaining == 0 do
+      call "processAck", [:msgs]
+    end
+    ifcond remaining > 0 do
+      call "receiveMessage", [:msgs, :remaining]
+    end
+  end
+
+  subprocess "receiveMessage", [:msgs, :remaining] do
     rcv {m, some_user} do
-      ifcond m == 1 do
-        snd user1, commitMessage
-        snd user2, commitMessage
-      end
-      ifcond m == 2 do
-        snd user1, rollback
-        snd user2, rollback
+      ifcond true do
+        call "receiveMessages", [[m | :msgs], :remaining-1]
       end
     end
-    rcv {m2, some_user} do
-      rcv {m, some_user} do
-        snd some_user, rollback
-      end
+  end
+
+  subprocess "processAck", [:msgs] do
+    ifcond 2 in msgs do
+      snd user1, rollback
+      snd user2, rollback
+    end
+    ifcond true do
+      snd user1, commitMessage
+      snd user2, commitMessage
     end
   end
 end

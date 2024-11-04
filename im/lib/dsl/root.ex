@@ -12,7 +12,8 @@ defmodule Im.Dsl.Root do
       ]
     ],
     entities: [
-      Im.Dsl.Process.process
+      Im.Dsl.Process.process,
+      Im.Dsl.SubProcess.process
     ]
   }]
 
