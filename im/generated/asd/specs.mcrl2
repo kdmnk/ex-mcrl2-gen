@@ -6,10 +6,10 @@ act
 proc
  User1(pid: Pid) = 
   sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
-    tau .
+    (tau .
     sendMessage(pid, server, 1)
     + tau .
-    sendMessage(pid, server, 2)
+    sendMessage(pid, server, 2))
   +
   sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
    sendMessage(pid, server, 4)
@@ -19,10 +19,10 @@ proc
   . User1();
  User2(pid: Pid) = 
   sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
-    tau .
+    (tau .
     sendMessage(pid, server, 1)
     + tau .
-    sendMessage(pid, server, 2)
+    sendMessage(pid, server, 2))
   +
   sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
    sendMessage(pid, server, 4)
@@ -41,14 +41,14 @@ proc
   (remaining == 0) -> (
    processAck(pid, user1, user2, msgs)
   )
-  .
+  +
   (remaining > 0) -> (
    receiveMsg(pid, user1, user2, msgs, remaining)
   )
  ;
  receiveMsg(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat), remaining: Int) = 
   sum some_user : Pid . sum m : MessageType . (true) -> receiveMessage(pid, some_user, m) . 
-   receiveMessages(pid, m |> msgs, remaining - 1)
+   receiveMessages(pid, user1, user2, m |> msgs, remaining - 1)
  ;
  processAck(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat)) = 
   (2 in msgs) -> (
@@ -56,7 +56,7 @@ proc
    .
    sendMessage(pid, user2, 5)
   )
-  .
+  +
   (!(2 in msgs)) -> (
    sendMessage(pid, user1, 3)
    .
