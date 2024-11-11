@@ -1,27 +1,86 @@
 defmodule User1 do
- def start() do
-  spawn(fn -> loop() end)
- end
- defp loop() do
-  receive do
-   {server, m} when m == 0 ->
-     IO.puts("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
-     if Main.chooseAnswer(__MODULE__, {}) do
-      IO.puts("User1: sending #{inspect(1)} to #{inspect(server)}")
-      send(server, {self(), 1})
-     else
-      IO.puts("User1: sending #{inspect(2)} to #{inspect(server)}")
-      send(server, {self(), 2})
-     end
-   {server, m} when m == 3 ->
-     IO.puts("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 3' holds")
-     IO.puts("User1: sending #{inspect(4)} to #{inspect(server)}")
-     send(server, {self(), 4})
-   {server, m} when m == 5 ->
-     IO.puts("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 5' holds")
-     IO.puts("User1: sending #{inspect(4)} to #{inspect(server)}")
-     send(server, {self(), 4})
+  use GenServer
+
+  defmodule InitState do
+    defstruct [:pid]
   end
-  loop()
- end
+
+  defmodule ChoiceState do
+    defstruct [:choice, :vars]
+  end
+
+  defmodule DoneState do
+    defstruct []
+  end
+
+  def start() do
+    if Process.whereis(__MODULE__) do
+      GenServer.stop(__MODULE__)
+    end
+    {:ok, pid} = GenServer.start_link(__MODULE__, [], name: __MODULE__)
+    %InitState{pid: pid}
+  end
+
+  def wait(%InitState{}) do
+    GenServer.call(__MODULE__, :wait)
+  end
+
+  def chooseAnswer(%ChoiceState{}, choice) do
+    GenServer.call(__MODULE__, {:chooseAnswer, choice})
+  end
+
+  @impl true
+  def init(_arg) do
+    {:ok, {%{}, nil}}
+  end
+
+  def handle_call(:wait, from, {state, true}) do
+    {:reply, state, {state, nil}}
+  end
+  def handle_call(:wait, from, {state, nil}) do
+    {:noreply, {state, from}}
+  end
+
+  def handle_call({:chooseAnswer, true}, _from, {state, waiting}) do
+    IO.puts("User1: sending #{inspect(1)} to #{inspect(Map.get(state.vars, :server))})}")
+    send(Map.get(state.vars, :server), {self(), 1})
+    {:reply, %DoneState{}, {%DoneState{}, waiting}}
+  end
+
+  def handle_call({:chooseAnswer, false}, _from, {state, waiting}) do
+    IO.puts("User1: sending #{inspect(2)} to #{inspect(Map.get(state.vars, :server))})}")
+    send(Map.get(state.vars, :server), {self(), 2})
+    {:reply, %DoneState{}, {%DoneState{}, waiting}}
+  end
+
+  def handle_cast({server, m}, {state, waiting}) when m == 0 do
+    IO.puts("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
+    choiceState = %ChoiceState{
+      choice: :chooseAnswer,
+      vars:
+      %{
+        :m => 0,
+        :server => server,
+      }
+    }
+
+    if waiting do
+      GenServer.reply(waiting, choiceState)
+    end
+    {:noreply, {choiceState, true}}
+  end
+
+  def handle_cast({server, 3}, state) do
+    IO.puts("User1: received #{inspect(3)} from #{inspect(server)} and 'm == 3' holds")
+    IO.puts("User1: sending #{inspect(4)} to #{inspect(server)}")
+    send(server, {self(), 4})
+    {:noreply, state}
+  end
+
+  def handle_cast({server, 5}, state) do
+    IO.puts("User1: received #{inspect(5)} from #{inspect(server)} and 'm == 5' holds")
+    IO.puts("User1: sending #{inspect(4)} to #{inspect(server)}")
+    send(server, {self(), 4})
+    {:noreply, state}
+  end
 end

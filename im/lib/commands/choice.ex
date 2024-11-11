@@ -12,8 +12,9 @@ defmodule Im.Commands.Choice do
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do
-    Im.Gen.Helpers.writeLn(state, "tau .", 1)
+    Im.Gen.Helpers.writeLn(state, "(tau .", 1)
     Im.Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.body, "+ tau .")
+    Im.Gen.Helpers.writeLn(state, ")", 1)
   end
 
 

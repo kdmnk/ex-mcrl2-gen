@@ -1,21 +1,21 @@
 defmodule Main do
  def run() do
   IO.puts("Main: starting User1")
-  user1_pid = User1.start()
-  IO.puts("Main: User1 started with PID #{inspect(user1_pid)}")
+  initState1 = User1.start()
+  IO.puts("Main: User1 started with PID #{inspect(initState1.pid)}")
   IO.puts("Main: starting User2")
-  user2_pid = User2.start()
-  IO.puts("Main: User2 started with PID #{inspect(user2_pid)}")
+  initState2 = User2.start()
+  IO.puts("Main: User2 started with PID #{inspect(initState2.pid)}")
   IO.puts("Main: starting Mach")
-  mach_pid = Mach.start(user1_pid, user2_pid)
+  mach_pid = Mach.start(initState1.pid, initState2.pid)
   IO.puts("Main: Mach started with PID #{inspect(mach_pid)}")
- end
- def chooseAnswer(module, state) do
-  #TODO: return value
-  true
- end
- def chooseAnswer(module, state) do
-  #TODO: return value
-  true
+
+  state = User1.wait(initState1)
+  IO.inspect(state)
+  state = User1.chooseAnswer(state, false)
+  |> User1.wait(state)
+  IO.inspect(state)
+  User2.wait(initState2)
+  |> User2.chooseAnswer(true)
  end
 end
