@@ -11,7 +11,7 @@ defmodule Im.Gen.GenState do
   end
 
   def indent(%Im.Gen.GenState{} = state) do
-    %{state | indentation: state.indentation + 1}
+    %{state | indentation: state.indentation + 2}
   end
 
   def addBoundVars(%Im.Gen.GenState{} = state, vars) do

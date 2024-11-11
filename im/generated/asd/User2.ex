@@ -17,6 +17,7 @@ defmodule User2 do
     if Process.whereis(__MODULE__) do
       GenServer.stop(__MODULE__)
     end
+
     {:ok, pid} = GenServer.start_link(__MODULE__, [], name: __MODULE__)
     %InitState{pid: pid}
   end
@@ -29,59 +30,54 @@ defmodule User2 do
     GenServer.call(__MODULE__, {:chooseAnswer, choice})
   end
 
-  @impl true
   def init(_arg) do
-    IO.inspect("  init")
     {:ok, {%{}, nil}}
   end
 
   def handle_call(:wait, from, {state, true}) do
     {:reply, state, {state, nil}}
   end
+
   def handle_call(:wait, from, {state, nil}) do
     {:noreply, {state, from}}
   end
 
   def handle_call({:chooseAnswer, true}, _from, {state, waiting}) do
-    IO.puts("User2: sending #{inspect(1)} to #{inspect(Map.get(state.vars, :server))})}")
+    IO.puts("User2: sending #{inspect(1)} to #{inspect(Map.get(state.vars, :server))}")
     send(Map.get(state.vars, :server), {self(), 1})
     {:reply, %DoneState{}, {%DoneState{}, waiting}}
   end
 
   def handle_call({:chooseAnswer, false}, _from, {state, waiting}) do
-    IO.puts("User2: sending #{inspect(2)} to #{inspect(Map.get(state.vars, :server))})}")
+    IO.puts("User2: sending #{inspect(2)} to #{inspect(Map.get(state.vars, :server))}")
     send(Map.get(state.vars, :server), {self(), 2})
     {:reply, %DoneState{}, {%DoneState{}, waiting}}
   end
 
   def handle_cast({server, m}, {state, waiting}) when m == 0 do
     IO.puts("User2: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
-    choiceState = %ChoiceState{
-      choice: :chooseAnswer,
-      vars:
-      %{
-        :m => 0,
-        :server => server,
-      }
-    }
-
+    state = %ChoiceState{choice: :chooseAnswer, vars: %{:m => m, :server => server}}
     if waiting do
-      GenServer.reply(waiting, choiceState)
+      GenServer.reply(waiting, state)
     end
-    {:noreply, {choiceState, true}}
+
+    waiting = true
+    {:noreply, {state, waiting}}
   end
 
-  def handle_cast({server, 3}, state) do
-    IO.puts("User2: received #{inspect(3)} from #{inspect(server)} and 'm == 3' holds")
-    IO.puts("User2: sending #{inspect(4)} to #{inspect(server)}")
-    send(server, {self(), 4})
-    {:noreply, state}
+  def handle_cast({server, m}, {state, waiting}) when m == 3 do
+    IO.puts("User2: received #{inspect(m)} from #{inspect(server)} and 'm == 3' holds")
+    IO.puts("User2: sending #{inspect(4)} to #{inspect(Map.get(state.vars, :server))}")
+    send(Map.get(state.vars, :server), {self(), 4})
+    {:noreply, {state, waiting}}
   end
 
-  def handle_cast({server, 5}, state) do
-    IO.puts("User2: received #{inspect(5)} from #{inspect(server)} and 'm == 5' holds")
-    IO.puts("User2: sending #{inspect(4)} to #{inspect(server)}")
-    send(server, {self(), 4})
-    {:noreply, state}
+  def handle_cast({server, m}, {state, waiting}) when m == 5 do
+    IO.puts("User2: received #{inspect(m)} from #{inspect(server)} and 'm == 5' holds")
+    IO.puts("User2: sending #{inspect(4)} to #{inspect(Map.get(state.vars, :server))}")
+    send(Map.get(state.vars, :server), {self(), 4})
+    {:noreply, {state, waiting}}
   end
+
 end
+

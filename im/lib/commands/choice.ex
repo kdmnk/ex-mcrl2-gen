@@ -3,12 +3,15 @@ defmodule Im.Commands.Choice do
 
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do
-    Im.Gen.Helpers.addNonDeterministicChoice(cmd.label)
-    GenEx.writeBlock(state, "if Main.#{cmd.label}(__MODULE__, #{getState(state.module_state)}) do", fn s ->
-      GenEx.writeCmds(s, [Enum.at(cmd.body, 0)])
-      Im.Gen.Helpers.writeLn(s, "else", -1)
-      GenEx.writeCmds(s, [Enum.at(cmd.body, 1)])
+    Im.Gen.Helpers.addNonDeterministicChoice(cmd)
+
+    vars = Enum.map(state.bounded_vars, fn var -> ":#{var} => #{var}" end)
+    Im.Gen.Helpers.writeLn(state, "state = %ChoiceState{choice: :#{cmd.label}, vars: %{#{Enum.join(vars, ", ")}}}")
+
+    GenEx.writeBlock(state, "if waiting do", fn s ->
+      Im.Gen.Helpers.writeLn(s, "GenServer.reply(waiting, state)")
     end)
+    Im.Gen.Helpers.writeLn(state, "waiting = true")
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do

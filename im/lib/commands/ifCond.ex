@@ -2,12 +2,12 @@ defmodule Im.Commands.IfCond do
   defstruct [:condition, :body]
 
 
-  def writeErl(%Im.Gen.GenState{} = state, %Im.Commands.IfCond{} = cmd, log) do
-    Im.Gen.Helpers.write(state, "when #{Im.Gen.GenMcrl2.stringifyAST(cmd.condition)} ->", "\n")
-
-    newState = Im.Gen.GenState.indent(state)
-    GenEx.writeLog(newState, log <> " and '#{Im.Gen.GenMcrl2.stringifyAST(cmd.condition)}' holds", 0)
-    GenEx.writeCmds(newState, cmd.body)
+  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.IfCond{} = cmd, %Im.Commands.Receive{} = receiveCmd) do
+    GenEx.writeBlock(state, "def handle_cast({#{receiveCmd.from}, #{receiveCmd.value}}, {state, waiting}) when #{Im.Gen.GenMcrl2.stringifyAST(cmd.condition)} do", fn s ->
+      GenEx.writeLog(s, "received \#{inspect(#{receiveCmd.value})} from \#{inspect(#{receiveCmd.from})}" <> " and '#{Im.Gen.GenMcrl2.stringifyAST(cmd.condition)}' holds", 0)
+      GenEx.writeCmds(s, cmd.body)
+      Im.Gen.Helpers.writeLn(s, "{:noreply, {state, waiting}}")
+    end)
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.IfCond{} = cmd) do

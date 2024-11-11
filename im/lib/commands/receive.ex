@@ -4,13 +4,8 @@ defmodule Im.Commands.Receive do
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
     {newState, newCmd} = boundNewVariables(state, cmd)
 
-    GenEx.writeBlock(newState, "receive do", fn s ->
-      Enum.map(cmd.body, fn c ->
-        Im.Gen.Helpers.writeLn(s, "{", 0, "")
-        if newCmd.from in state.bounded_vars, do: Im.Gen.Helpers.write(s, "^")
-        Im.Gen.Helpers.write(s, "#{newCmd.from}, #{newCmd.value}} ")
-        Im.Commands.IfCond.writeErl(Im.Gen.GenState.indent(s), c, "received \#{inspect(#{newCmd.value})} from \#{inspect(#{newCmd.from})}")
-      end)
+    Enum.map(cmd.body, fn c ->
+      Im.Commands.IfCond.writeEx(newState, c, newCmd)
     end)
   end
 

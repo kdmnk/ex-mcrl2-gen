@@ -8,6 +8,7 @@ defmodule GenEx do
   end
 
   def run(folder, %{:processes => processes}) do
+
     for p <- processes do
       state = Im.Gen.GenState.new("#{folder}/#{p.identifier}.ex")
       Im.Process.writeEx(state, p)
@@ -63,6 +64,6 @@ defmodule GenEx do
   def writeBlock(%Im.Gen.GenState{} = state, str, child) do
     Im.Gen.Helpers.writeLn(state, str)
     child.(Im.Gen.GenState.indent(state))
-    Im.Gen.Helpers.writeLn(state, "end")
+    Im.Gen.Helpers.writeLn(state, "end\n")
   end
 end

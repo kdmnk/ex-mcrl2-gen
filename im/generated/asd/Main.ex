@@ -13,7 +13,6 @@ defmodule Main do
   state = User1.wait(initState1)
   IO.inspect(state)
   state = User1.chooseAnswer(state, false)
-  |> User1.wait(state)
   IO.inspect(state)
   User2.wait(initState2)
   |> User2.chooseAnswer(true)
