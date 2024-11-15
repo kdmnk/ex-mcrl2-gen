@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Entities.IfCondCmd do
+defmodule Im.Dsl.Entities.ReceiveCaseCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :ifcond,
-    describe: "If condition holds, continue to body.",
-    target: Im.Commands.IfCond,
+    name: :when!,
+    describe: "Receive case command.",
+    target: Im.Commands.ReceiveCase,
     args: [:condition],
     schema: [
       condition: [
@@ -16,5 +16,4 @@ defmodule Im.Dsl.Entities.IfCondCmd do
       Im.Dsl.Entities.CallCmd.cmd
     ]]
   }
-
 end

@@ -1,7 +1,7 @@
 defmodule Im.Dsl.Entities.ChoiceCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :choice,
+    name: :choice!,
     describe: "Non deterministic choice.",
     target: Im.Commands.Choice,
     args: [:label],

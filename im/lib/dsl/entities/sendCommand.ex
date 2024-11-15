@@ -1,7 +1,7 @@
 defmodule Im.Dsl.Entities.SendCommand do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :snd,
+    name: :send!,
     describe: "Send command.",
     target: Im.Commands.Send,
     args: [:to, :message],

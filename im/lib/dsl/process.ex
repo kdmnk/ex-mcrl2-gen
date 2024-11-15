@@ -18,7 +18,7 @@ defmodule Im.Dsl.Process do
       Im.Dsl.Entities.SendCommand.cmd,
       Im.Dsl.Entities.ChoiceCmd.cmd,
       Im.Dsl.Entities.CallCmd.cmd,
-      Im.Dsl.Entities.IfCondCmd.cmd
+      Im.Dsl.Entities.IfCmd.cmd
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

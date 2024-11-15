@@ -5,7 +5,7 @@ defmodule Im.Commands.Receive do
     {newState, newCmd} = boundNewVariables(state, cmd)
 
     Enum.map(cmd.body, fn c ->
-      Im.Commands.IfCond.writeEx(newState, c, newCmd)
+      Im.Commands.ReceiveCase.writeEx(newState, c, newCmd)
     end)
   end
 

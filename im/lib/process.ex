@@ -1,7 +1,8 @@
 defmodule Im.Process do
+  alias Im.Commands.Receive
   alias Im.Gen.GenMcrl2
 
-  defstruct [:identifier, :state, :run]
+  defstruct [:identifier, :state, :run, :test]
 
   def writeMcrl2(%Im.Process{} = p, state) do
     Im.Gen.Helpers.writeLn(state, "#{p.identifier}(#{Im.Gen.Helpers.getState(p.state)}) = ")
@@ -11,7 +12,7 @@ defmodule Im.Process do
     Im.Gen.Helpers.writeLn(state, ". #{p.identifier}();", +1)
   end
 
-  def writeEx(%Im.Gen.GenState{} = state, %Im.Process{} = p) do
+  def writeEx(%Im.Gen.GenState{} = state, %Im.Process{} = p, subprocesses) do
     GenEx.writeBlock(state, "defmodule #{p.identifier} do", fn s ->
       s = %{s |
         bounded_vars: s.bounded_vars ++ Im.Process.stateList(p),
@@ -29,13 +30,14 @@ defmodule Im.Process do
       GenEx.writeBlock(s, "defmodule DoneState do", fn s ->
         Im.Gen.Helpers.writeLn(s, "defstruct []")
       end)
-      GenEx.writeBlock(s, "def start(#{stateStr(p)}) do", fn s ->
+      GenEx.writeBlock(s, "def init(#{stateStr(p)}) do", fn s ->
         GenEx.writeBlock(s, "if Process.whereis(__MODULE__) do", fn s ->
           Im.Gen.Helpers.writeLn(s, "GenServer.stop(__MODULE__)")
         end)
         Im.Gen.Helpers.writeLn(s, "{:ok, pid} = GenServer.start_link(__MODULE__, [#{stateStr(p)}], name: __MODULE__)")
         Im.Gen.Helpers.writeLn(s, "%InitState{pid: pid}")
       end)
+
       GenEx.writeBlock(s, "def wait(%InitState{}) do", fn s ->
         Im.Gen.Helpers.writeLn(s, "GenServer.call(__MODULE__, :wait)")
       end)
@@ -65,8 +67,21 @@ defmodule Im.Process do
         end)
       end)
 
-      Enum.map(p.run, fn cmd ->
-        Im.Commands.writeEx(s, cmd)
+      case Enum.take(p.run, 1)  do
+        %Receive{} ->
+          Enum.map(p.run, fn cmd ->
+            Im.Commands.writeEx(s, cmd)
+          end)
+        _ ->
+          GenEx.writeBlock(s, "def start() do", fn s ->
+            Enum.map(p.run, fn cmd ->
+              Im.Commands.writeEx(s, cmd)
+            end)
+          end)
+      end
+
+      Enum.map(subprocesses, fn sp ->
+        Im.SubProcess.writeEx(s, sp)
       end)
     end)
   end

@@ -4,7 +4,7 @@ defmodule Im.Commands.Send do
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Send{} = cmd) do
     GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(Map.get(state.vars, :#{cmd.to}))}")
-    Im.Gen.Helpers.writeLn(state, "send(Map.get(state.vars, :#{cmd.to}), {self(), #{cmd.message}})")
+    Im.Gen.Helpers.writeLn(state, "GenServer.cast(Map.get(state.vars, :#{cmd.to}), {self(), #{cmd.message}})")
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Send{} = cmd) do

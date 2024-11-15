@@ -1,4 +1,6 @@
 defmodule GenEx do
+  alias Im.SubProcess
+  alias Im.Process
   def main() do
     folder = "./generated/asd"
     :ok = File.mkdir_p(folder)
@@ -7,11 +9,23 @@ defmodule GenEx do
     run(folder, conf)
   end
 
-  def run(folder, %{:processes => processes}) do
+  def run(folder, %{:processes => all_process}) do
 
-    for p <- processes do
+    processes = Enum.filter(all_process, fn
+      %Process{} -> true
+     _ -> false
+    end)
+
+    for %Process{identifier: id} = p <- processes do
       state = Im.Gen.GenState.new("#{folder}/#{p.identifier}.ex")
-      Im.Process.writeEx(state, p)
+
+      subprocesses = Enum.filter(all_process, fn
+        %SubProcess{process: ^id} -> true
+        _ -> false
+      end)
+
+      Process.writeEx(state, p, subprocesses)
+
       File.close(state.file)
     end
 
@@ -21,13 +35,13 @@ defmodule GenEx do
         initProcesses(s, processes, [])
       end)
 
-      choices = Im.Gen.Helpers.getNonDeterministicChoices()
-      Enum.map(choices, fn c ->
-        writeBlock(s, "def #{c}(module, state) do", fn s ->
-          Im.Gen.Helpers.writeLn(s, "#TODO: return value")
-          Im.Gen.Helpers.writeLn(s, "true")
-        end)
-      end)
+      # choices = Im.Gen.Helpers.getNonDeterministicChoices()
+      # Enum.map(choices, fn c ->
+      #   writeBlock(s, "def #{c}(module, state) do", fn s ->
+      #     Im.Gen.Helpers.writeLn(s, "#TODO: return value")
+      #     Im.Gen.Helpers.writeLn(s, "true")
+      #   end)
+      # end)
     end)
   end
 
@@ -40,6 +54,10 @@ defmodule GenEx do
         Im.Commands.Receive.writeEx(state, cmd)
       %Im.Commands.Choice{} ->
         Im.Commands.Choice.writeEx(state, cmd)
+      %Im.Commands.Call{} ->
+        Im.Commands.Call.writeEx(state, cmd)
+      %Im.Commands.IfCond{} ->
+        Im.Commands.IfCond.writeEx(state, cmd)
     end
     writeCmds(state, cmds)
   end

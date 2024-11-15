@@ -1,6 +1,6 @@
 defmodule Im.SubProcess do
 
-  defstruct [:name, :arg, :run]
+  defstruct [:process, :name, :arg, :run]
 
   def writeMcrl2(%Im.SubProcess{} = p, state) do
 
@@ -14,8 +14,8 @@ defmodule Im.SubProcess do
   end
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.SubProcess{} = p) do
-    args = Im.Gen.Helpers.getState(p.arg)
-    GenEx.writeBlock(state, "def #{p.name}(#{args}) do", fn s ->
+    args = Keyword.keys(p.arg) |> Enum.join(", ")
+    GenEx.writeBlock(state, "def #{p.name}(state, #{args}) do", fn s ->
       Enum.map(p.run, fn cmd ->
         Im.Commands.writeEx(s, cmd)
       end)

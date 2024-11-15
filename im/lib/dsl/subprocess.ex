@@ -2,9 +2,12 @@ defmodule Im.Dsl.SubProcess do
   def process, do: %Spark.Dsl.Entity{
     name: :subprocess,
     describe: "A subprocess.",
-    args: [:name, :arg],
+    args: [:process, :name, :arg],
     target: Im.SubProcess,
     schema: [
+      process: [
+        type: :atom
+      ],
       name: [
         type: :string,
         doc: "Name of the subprocess"
@@ -18,7 +21,7 @@ defmodule Im.Dsl.SubProcess do
       ]
     ],
     entities: [run: [
-      Im.Dsl.Entities.IfCondCmd.cmd,
+      Im.Dsl.Entities.IfCmd.cmd,
       Im.Dsl.Entities.ReceiveCmd.cmd,
       Im.Dsl.Entities.SendCommand.cmd,
       Im.Dsl.Entities.ChoiceCmd.cmd,
@@ -33,7 +36,9 @@ defmodule Im.Dsl.SubProcess do
       {name, {:pid, pidName}} -> {name, {:pid, String.replace_prefix(to_string(pidName), "Elixir.", "")}}
       v -> v
     end)
-    {:ok, %{entity | arg: state}}
+    process = String.replace_prefix(to_string(entity.process), "Elixir.", "")
+
+    {:ok, %{entity | arg: state, process: process}}
   end
 
 end

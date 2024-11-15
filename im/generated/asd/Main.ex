@@ -1,20 +1,25 @@
 defmodule Main do
- def run() do
-  IO.puts("Main: starting User1")
-  initState1 = User1.start()
-  IO.puts("Main: User1 started with PID #{inspect(initState1.pid)}")
-  IO.puts("Main: starting User2")
-  initState2 = User2.start()
-  IO.puts("Main: User2 started with PID #{inspect(initState2.pid)}")
-  IO.puts("Main: starting Mach")
-  mach_pid = Mach.start(initState1.pid, initState2.pid)
-  IO.puts("Main: Mach started with PID #{inspect(mach_pid)}")
+  def run() do
+    IO.puts("Main: starting User1")
+    user1 = User1Api.init()
+    IO.puts("Main: User1 started with PID #{inspect(user1.pid)}")
+    IO.puts("Main: starting User2")
+    user2 = User2Api.init()
+    IO.puts("Main: User2 started with PID #{inspect(user2.pid)}")
+    IO.puts("Main: starting Mach")
+    mach_pid = MachApi.init(user1.pid, user2.pid)
+    IO.puts("Main: Mach started with PID #{inspect(mach_pid.pid)}")
 
-  state = User1.wait(initState1)
-  IO.inspect(state)
-  state = User1.chooseAnswer(state, false)
-  IO.inspect(state)
-  User2.wait(initState2)
-  |> User2.chooseAnswer(true)
+    MachApi.start()
+
+    IO.inspect("Main: calling User1 waiting")
+    state = User1Api.wait(user1)
+    IO.inspect(state)
+    state = User1Api.chooseAnswer(state, false)
+    IO.inspect(state)
+
+    User2Api.wait(user2)
+    |> User2Api.chooseAnswer(true)
  end
+
 end

@@ -1,7 +1,7 @@
 defmodule Im.Dsl.Entities.CallCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :call,
+    name: :call!,
     describe: "Call a subprocess",
     target: Im.Commands.Call,
     args: [:name, :arg],
