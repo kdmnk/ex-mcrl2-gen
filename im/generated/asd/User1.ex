@@ -5,6 +5,11 @@ defmodule User1 do
     {:ok, %{}}
   end
 
+  def handle_cast(:start, state) do
+    state = %{}
+    {:noreply, state}
+  end
+
   def handle_cast({:chooseAnswer, true}, state) do
     IO.puts("User1: sending #{inspect(1)} to #{inspect(Map.get(state, :server))}")
     GenServer.cast(Map.get(state, :server), {self(), 1})

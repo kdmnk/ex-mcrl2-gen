@@ -44,11 +44,11 @@ proc
    processAck(pid, user1, user2, msgs)
   )
   <> (
-   processAck(pid, user1, user2, msgs)
+   receiveMsg(pid, user1, user2, msgs, remaining)
   )
  ;
  receiveMsg(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat), remaining: Int) = 
-  sum some_user : Pid . sum m : MessageType . (true) -> receiveMessage(pid, some_user, m) . 
+  sum some_user : Pid . sum m : MessageType . (m == 1 || m == 2) -> receiveMessage(pid, some_user, m) . 
    receiveMessages(pid, user1, user2, m |> msgs, remaining - 1)
  ;
  processAck(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat)) = 
@@ -58,10 +58,14 @@ proc
    sendMessage(pid, user2, 5)
   )
   <> (
-   sendMessage(pid, user1, 5)
+   sendMessage(pid, user1, 3)
    .
-   sendMessage(pid, user2, 5)
+   sendMessage(pid, user2, 3)
   )
+  .
+  sum some_user : Pid . sum m : MessageType . (m == 5) -> receiveMessage(pid, some_user, m) . tau
+  .
+  sum some_user : Pid . sum m : MessageType . (m == 5) -> receiveMessage(pid, some_user, m) . tau
  ;
  Network(msgs: FSet(Message)) =
   sum sender : Pid,  receiver : Pid, msg: MessageType . networkReceiveMessage(sender, receiver, msg)
@@ -72,5 +76,5 @@ proc
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  User1(6058) || User2(788) || Mach(7643, 6058, 788) || Network({})
+  User1(9050) || User2(5524) || Mach(3721, 9050, 5524) || Network({})
 ));

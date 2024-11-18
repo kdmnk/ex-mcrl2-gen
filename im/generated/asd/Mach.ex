@@ -14,17 +14,20 @@ defmodule Mach do
     receiveMessages(state, Map.get(state, :user1), Map.get(state, :user2), [], 2)
   end
 
-  def handle_cast({some_user, m}, state) when true do
-    IO.puts("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'true' holds")
+  def handle_cast({some_user, m}, state) when m == 1 or m == 2 do
+    IO.puts("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 1 or m == 2' holds")
     receiveMessages(state, Map.get(state, :user1), Map.get(state, :user2), [m | Map.get(state, :msgs)], Map.get(state, :remaining) - 1)
+  end
+
+  def handle_cast({some_user, m}, state) when m == 4 do
+    IO.puts("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 4' holds")
+    {:noreply, state}
   end
 
   def receiveMessages(state, user1, user2, msgs, remaining) do
     if (remaining == 0) do
       processAck(state, user1, user2, msgs)
-    end
-
-    if (remaining > 0) do
+    else
       receiveMsg(state, user1, user2, msgs, remaining)
     end
 

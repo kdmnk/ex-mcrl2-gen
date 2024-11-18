@@ -12,11 +12,8 @@ defmodule Main do
 
     MachApi.start()
 
-    IO.inspect("Main: calling User1 waiting")
     state = User1Api.wait(user1)
-    IO.inspect(state)
-    state = User1Api.chooseAnswer(state, false)
-    IO.inspect(state)
+    state = User1Api.chooseAnswer(state, true)
 
     User2Api.wait(user2)
     |> User2Api.chooseAnswer(true)

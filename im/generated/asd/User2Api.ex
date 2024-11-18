@@ -24,7 +24,7 @@ defmodule User2Api do
   end
 
   def wait(%InitState{}) do
-    IO.inspect("User2: wait called")
+    IO.puts("User2Api: wait called")
     GenServer.call(__MODULE__, :wait)
   end
 
@@ -37,18 +37,18 @@ defmodule User2Api do
   end
 
   def handle_call(:wait, from, {%ChoiceState{} = choiceState, true}) do
-    IO.inspect("User2: started waiting. Replying with already updated state.")
+    IO.puts("User2Api: started waiting. Replying with already updated state.")
     {:reply, choiceState, {%{}, nil}}
   end
 
   def handle_call(:wait, from, {state, nil}) do
-    IO.inspect("User2: started waiting.")
+    IO.puts("User2Api: started waiting.")
     {:noreply, {state, from}}
   end
 
   def handle_cast(%ChoiceState{} = choiceState, {state, waiting}) do
     if waiting do
-      IO.inspect("User2: replying to wait")
+      IO.puts("User2Api: replying to wait")
       GenServer.reply(waiting, choiceState)
       {:noreply, {%{}, nil}}
     else

@@ -8,7 +8,6 @@ defmodule Im.Gen.Helpers do
   end
 
   def getState(state) do
-    IO.inspect(state)
     extState = Keyword.put(state, :pid, "Pid") # add own pid
     extState
     |> Keyword.keys()

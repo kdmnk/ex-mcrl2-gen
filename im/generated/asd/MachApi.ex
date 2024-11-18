@@ -5,14 +5,6 @@ defmodule MachApi do
     defstruct [:pid]
   end
 
-  defmodule ChoiceState do
-    defstruct [:choice, :vars]
-  end
-
-  defmodule DoneState do
-    defstruct []
-  end
-
   def init(user1, user2) do
     if Process.whereis(Mach) do
       GenServer.stop(Mach)

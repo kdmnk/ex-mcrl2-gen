@@ -15,7 +15,7 @@ defmodule Im.Commands.If do
     Im.Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.then)
     Im.Gen.Helpers.writeLn(state, ")")
     Im.Gen.Helpers.writeLn(state, "<> (")
-    Im.Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.then)
+    Im.Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.else)
     Im.Gen.Helpers.writeLn(state, ")")
   end
 

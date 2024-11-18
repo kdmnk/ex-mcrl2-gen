@@ -10,7 +10,6 @@ defmodule Im.Gen.GenMcrl2 do
 
   def run(folder, %{:messageType => messageType, :processes => processes}) do
     state = Im.Gen.GenState.new("#{folder}/specs.mcrl2")
-    IO.inspect(state.indentation)
     Im.Gen.Helpers.writeLn(state, "sort MessageType = #{messageType};")
     Im.Gen.Helpers.writeLn(state, "sort Pid = Nat;")
     Im.Gen.Helpers.writeLn(state, "sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);")
@@ -83,6 +82,8 @@ defmodule Im.Gen.GenMcrl2 do
       {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
       [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left)} #{op} #{stringifyAST(right)})"
       [{:|, _pos, [left, right]}] -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
+      {:or, _pos, [left, right]} -> "#{stringifyAST(left)} || #{stringifyAST(right)}"
+      {:and, _pos, [left, right]} -> "#{stringifyAST(left)} && #{stringifyAST(right)}"
       {:!, _pos, right} -> "!#{stringifyAST(right)}"
       {var, _pos, nil} -> var
       var when is_atom(var) -> var
