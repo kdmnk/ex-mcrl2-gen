@@ -47,18 +47,7 @@ defmodule GenEx do
 
   def writeCmds(_, []), do: IO.puts("")
   def writeCmds(state, [cmd | cmds]) do
-    case cmd do
-      %Im.Commands.Send{} ->
-        Im.Commands.Send.writeEx(state, cmd)
-      %Im.Commands.Receive{} ->
-        Im.Commands.Receive.writeEx(state, cmd)
-      %Im.Commands.Choice{} ->
-        Im.Commands.Choice.writeEx(state, cmd)
-      %Im.Commands.Call{} ->
-        Im.Commands.Call.writeEx(state, cmd)
-      %Im.Commands.IfCond{} ->
-        Im.Commands.IfCond.writeEx(state, cmd)
-    end
+    Im.Commands.writeEx(state, cmd)
     writeCmds(state, cmds)
   end
 

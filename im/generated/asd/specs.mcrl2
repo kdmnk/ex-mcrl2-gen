@@ -6,10 +6,11 @@ act
 proc
  User1(pid: Pid) = 
   sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
-    tau .
+    (tau .
     sendMessage(pid, server, 1)
     + tau .
     sendMessage(pid, server, 2)
+    )
   +
   sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
    sendMessage(pid, server, 4)
@@ -19,10 +20,11 @@ proc
   . User1();
  User2(pid: Pid) = 
   sum server : Pid . sum m : MessageType . (m == 0) -> receiveMessage(pid, server, m) . 
-    tau .
+    (tau .
     sendMessage(pid, server, 1)
     + tau .
     sendMessage(pid, server, 2)
+    )
   +
   sum server : Pid . sum m : MessageType . (m == 3) -> receiveMessage(pid, server, m) . 
    sendMessage(pid, server, 4)
@@ -41,9 +43,8 @@ proc
   (remaining == 0) -> (
    processAck(pid, user1, user2, msgs)
   )
-  .
-  (remaining > 0) -> (
-   receiveMsg(pid, user1, user2, msgs, remaining)
+  <> (
+   processAck(pid, user1, user2, msgs)
   )
  ;
  receiveMsg(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat), remaining: Int) = 
@@ -56,11 +57,10 @@ proc
    .
    sendMessage(pid, user2, 5)
   )
-  .
-  (!(2 in msgs)) -> (
-   sendMessage(pid, user1, 3)
+  <> (
+   sendMessage(pid, user1, 5)
    .
-   sendMessage(pid, user2, 3)
+   sendMessage(pid, user2, 5)
   )
  ;
  Network(msgs: FSet(Message)) =
@@ -72,5 +72,5 @@ proc
 init
  allow({outgoingMessage, incomingMessage},
   comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-  User1(9559) || User2(9912) || Mach(1912, 9559, 9912) || Network({})
+  User1(6058) || User2(788) || Mach(7643, 6058, 788) || Network({})
 ));
