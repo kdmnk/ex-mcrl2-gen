@@ -1,8 +1,12 @@
 defmodule User2 do
   use GenServer
 
-  def init(_arg) do
-    {:ok, %{}}
+  def init(vars) do
+    {:ok, vars}
+  end
+
+  def handle_cast(:start, state) do
+    {:noreply, state}
   end
 
   def handle_cast({:chooseAnswer, true}, state) do
@@ -20,7 +24,8 @@ defmodule User2 do
   def handle_cast({server, m}, state) when m == 0 do
     IO.puts("User2: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
     state = %{:m => m, :server => server}
-    GenServer.cast(User2Api, %User2Api.ChoiceState{choice: :chooseAnswer, vars: state})
+    state = %{:m => m, :server => server}
+    GenServer.cast(User2Api, {:new_choice, %User2Api.ChoiceChooseAnswerState{choice: :chooseAnswer, vars: state}})
     {:noreply, state}
   end
 

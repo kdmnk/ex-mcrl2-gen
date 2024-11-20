@@ -18,13 +18,14 @@ defmodule GenEx do
 
     for %Process{identifier: id} = p <- processes do
       state = Im.Gen.GenState.new("#{folder}/#{p.identifier}.ex")
+      stateApi = Im.Gen.GenState.new("#{folder}/#{p.identifier}Api.ex")
 
       subprocesses = Enum.filter(all_process, fn
         %SubProcess{process: ^id} -> true
         _ -> false
       end)
 
-      Process.writeEx(state, p, subprocesses)
+      Process.writeEx(state, stateApi, p, subprocesses)
 
       File.close(state.file)
     end
@@ -72,5 +73,20 @@ defmodule GenEx do
     Im.Gen.Helpers.writeLn(state, str)
     child.(Im.Gen.GenState.indent(state))
     Im.Gen.Helpers.writeLn(state, "end\n")
+  end
+
+  def stringifyAST(ast) do
+    case ast do
+      {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
+      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left)} #{op} #{stringifyAST(right)})"
+      [{:|, _pos, [left, right]}] -> "[#{stringifyAST(left)} | #{stringifyAST(right)}]"
+      {:or, _pos, [left, right]} -> "#{stringifyAST(left)} or #{stringifyAST(right)}"
+      {:and, _pos, [left, right]} -> "#{stringifyAST(left)} and #{stringifyAST(right)}"
+      {:!, _pos, right} -> "!#{stringifyAST(right)}"
+      {var, _pos, nil} -> var
+      var when is_atom(var) -> var
+      int when is_integer(int) -> int
+      [] -> "[]"
+    end
   end
 end

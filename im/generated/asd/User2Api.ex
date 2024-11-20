@@ -5,12 +5,8 @@ defmodule User2Api do
     defstruct [:pid]
   end
 
-  defmodule ChoiceState do
+  defmodule ChoiceChooseAnswerState do
     defstruct [:choice, :vars]
-  end
-
-  defmodule DoneState do
-    defstruct []
   end
 
   def init() do
@@ -18,43 +14,45 @@ defmodule User2Api do
       GenServer.stop(User2)
     end
 
-    {:ok, pid} = GenServer.start_link(User2, [], name: User2)
+    {:ok, pid} = GenServer.start_link(User2, %{}, name: User2)
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
     %InitState{pid: pid}
   end
 
-  def wait(%InitState{}) do
-    IO.puts("User2Api: wait called")
+  def start(%InitState{}) do
+    GenServer.cast(User2, :start)
+  end
+
+  def wait() do
     GenServer.call(__MODULE__, :wait)
   end
 
-  def chooseAnswer(%ChoiceState{}, choice) do
+  def choosechooseAnswer(%ChoiceChooseAnswerState{}, choice) do
     GenServer.cast(User2, {:chooseAnswer, choice})
   end
 
   def init(_) do
-    {:ok, {%{}, nil}}
+    {:ok, %{choice_state: nil, choice_received: false, waiting_from: nil}}
   end
 
-  def handle_call(:wait, from, {%ChoiceState{} = choiceState, true}) do
-    IO.puts("User2Api: started waiting. Replying with already updated state.")
-    {:reply, choiceState, {%{}, nil}}
+  def handle_call(:wait, _from, %{choice_state: choiceState, choice_received: true, waiting_from: nil}) do
+    IO.puts("User2Api: Started waiting. Replying with already updated state.")
+    {:reply, choiceState, %{choice_state: nil, choice_received: false, waiting_from: nil}}
   end
 
-  def handle_call(:wait, from, {state, nil}) do
-    IO.puts("User2Api: started waiting.")
-    {:noreply, {state, from}}
+  def handle_call(:wait, from, %{choice_state: nil, choice_received: false, waiting_from: nil}) do
+    IO.puts("User2Api: Started waiting.")
+    {:noreply, %{choice_state: nil, choice_received: false, waiting_from: from}}
   end
 
-  def handle_cast(%ChoiceState{} = choiceState, {state, waiting}) do
-    if waiting do
-      IO.puts("User2Api: replying to wait")
-      GenServer.reply(waiting, choiceState)
-      {:noreply, {%{}, nil}}
-    else
-      {:noreply, {choiceState, true}}
-    end
+  def handle_cast({:new_choice, choiceState}, %{choice_state: nil, choice_received: false, waiting_from: nil}) do
+    {:noreply, %{choice_state: choiceState, choice_received: true, waiting_from: nil}}
+  end
 
+  def handle_cast({:new_choice, choiceState}, %{choice_state: nil, choice_received: false, waiting_from: from}) do
+    IO.puts("User2Api: replying to wait")
+    GenServer.reply(from, choiceState)
+    {:noreply, %{choice_state: nil, choice_received: false, waiting_from: nil}}
   end
 
 end

@@ -15,11 +15,13 @@ defmodule MachApi do
     %InitState{pid: pid}
   end
 
-  def start() do
+  def start(%InitState{}) do
     GenServer.cast(Mach, :start)
   end
 
   def init(_) do
-    {:ok, nil}
+    {:ok, {%{}, nil}}
   end
+
 end
+

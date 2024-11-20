@@ -57,7 +57,7 @@ defmodule Im.Config do
   process Mach, %{user1 => {:pid, User1}, user2 => {:pid, User2}} do
     send! user1, commitRequest
     send! user2, commitRequest
-    call! "receiveMessages", [user1, user2, [], 2]
+    call! "receiveMessages", [[], 2]
   end
 
   subprocess Mach, "receiveMessages", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}, :remaining => :Int} do
@@ -91,12 +91,12 @@ defmodule Im.Config do
       end
     end
     rcv! {m, some_user} do
-      when! m == 5 do
+      when! m == 4 do
 
       end
     end
     rcv! {m, some_user} do
-      when! m == 5 do
+      when! m == 4 do
 
       end
     end

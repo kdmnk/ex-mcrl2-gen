@@ -12,73 +12,115 @@ defmodule Im.Process do
     Im.Gen.Helpers.writeLn(state, ". #{p.identifier}();", +1)
   end
 
-  def writeEx(%Im.Gen.GenState{} = state, %Im.Process{} = p, subprocesses) do
+  def writeEx(%Im.Gen.GenState{} = state, %Im.Gen.GenState{} = stateApi, %Im.Process{} = p, subprocesses) do
+
+    choices = getCommands(Im.Commands.Choice, p.run, [])
+
+    GenEx.writeBlock(stateApi, "defmodule #{p.identifier}Api do", fn s ->
+      s = %{s |
+        module_name: p.identifier <> "Api",
+      }
+
+      Im.Gen.Helpers.writeLn(s, "use GenServer\n")
+      GenEx.writeBlock(s, "defmodule InitState do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "defstruct [:pid]")
+      end)
+
+      Enum.map(choices, fn cmd ->
+        GenEx.writeBlock(s, "defmodule Choice#{cmd.label}State do", fn s ->
+          Im.Gen.Helpers.writeLn(s, "defstruct [:choice, :vars]")
+        end)
+      end)
+
+      GenEx.writeBlock(s, "def init(#{stateStr(p)}) do", fn s ->
+        GenEx.writeBlock(s, "if Process.whereis(#{p.identifier}) do", fn s ->
+          Im.Gen.Helpers.writeLn(s, "GenServer.stop(#{p.identifier})")
+        end)
+        Im.Gen.Helpers.writeLn(s, "{:ok, pid} = GenServer.start_link(#{p.identifier}, %{#{stateMap(p)}}, name: #{p.identifier})")
+        Im.Gen.Helpers.writeLn(s, "GenServer.start_link(__MODULE__, [], name: __MODULE__)")
+        Im.Gen.Helpers.writeLn(s, "%InitState{pid: pid}")
+      end)
+
+      GenEx.writeBlock(s, "def start(%InitState{}) do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "GenServer.cast(#{p.identifier}, :start)")
+      end)
+
+      if choices != [] do
+        GenEx.writeBlock(s, "def wait() do", fn s ->
+          Im.Gen.Helpers.writeLn(s, "GenServer.call(__MODULE__, :wait)")
+        end)
+
+        Enum.map(choices, fn cmd ->
+          GenEx.writeBlock(s, "def choose#{cmd.label}(%Choice#{cmd.label}State{}, choice) do", fn s ->
+            Im.Gen.Helpers.writeLn(s, "GenServer.cast(#{p.identifier}, {:#{cmd.label}, choice})")
+          end)
+        end)
+      end
+
+      GenEx.writeBlock(s, "def init(_) do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "{:ok, {%{}, nil}}")
+      end)
+
+      if choices != [] do
+        GenEx.writeBlock(s, "def handle_call(:wait, from, {choiceState, true}) do", fn s ->
+          GenEx.writeLog(s, "Started waiting. Replying with already updated state.")
+          Im.Gen.Helpers.writeLn(s, "{:reply, choiceState, {%{}, nil}}")
+        end)
+
+        GenEx.writeBlock(s, "def handle_call(:wait, from, {state, nil}) do", fn s ->
+          GenEx.writeLog(s, "Started waiting.")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, {state, from}}")
+        end)
+
+
+        GenEx.writeBlock(s, "def handle_cast({:new_choice, choiceState},{_, waiting}) do", fn s ->
+          GenEx.writeBlock(s, "if waiting do", fn s ->
+            GenEx.writeLog(s, "replying to wait")
+            Im.Gen.Helpers.writeLn(s, "GenServer.reply(waiting, choiceState)")
+            Im.Gen.Helpers.writeLn(s, "{:noreply, {%{}, nil}}")
+            Im.Gen.Helpers.writeLn(s, "else", -1)
+            Im.Gen.Helpers.writeLn(s, "{:noreply, {choiceState, true}}")
+          end)
+        end)
+      end
+    end)
+
+
     GenEx.writeBlock(state, "defmodule #{p.identifier} do", fn s ->
       s = %{s |
         bounded_vars: s.bounded_vars ++ Im.Process.stateList(p),
         module_name: p.identifier,
         module_state: Im.Process.stateList(p)}
 
-
       Im.Gen.Helpers.writeLn(s, "use GenServer\n")
-      GenEx.writeBlock(s, "defmodule InitState do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "defstruct [:pid]")
+
+      GenEx.writeBlock(s, "def init(vars) do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "{:ok, vars}")
       end)
-      GenEx.writeBlock(s, "defmodule ChoiceState do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "defstruct [:choice, :vars]")
-      end)
-      GenEx.writeBlock(s, "defmodule DoneState do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "defstruct []")
-      end)
-      GenEx.writeBlock(s, "def init(#{stateStr(p)}) do", fn s ->
-        GenEx.writeBlock(s, "if Process.whereis(__MODULE__) do", fn s ->
-          Im.Gen.Helpers.writeLn(s, "GenServer.stop(__MODULE__)")
+
+      GenEx.writeBlock(s, "def handle_cast(:start, state) do", fn s ->
+        Enum.map(p.run, fn cmd ->
+          Im.Commands.writeEx(s, cmd)
         end)
-        Im.Gen.Helpers.writeLn(s, "{:ok, pid} = GenServer.start_link(__MODULE__, [#{stateStr(p)}], name: __MODULE__)")
-        Im.Gen.Helpers.writeLn(s, "%InitState{pid: pid}")
       end)
 
-      GenEx.writeBlock(s, "def wait(%InitState{}) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "GenServer.call(__MODULE__, :wait)")
-      end)
-      GenEx.writeBlock(s, "def chooseAnswer(%ChoiceState{}, choice) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "GenServer.call(__MODULE__, {:chooseAnswer, choice})")
-      end)
-      GenEx.writeBlock(s, "def init(_arg) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "{:ok, {%{}, nil}}")
-      end)
-      GenEx.writeBlock(s, "def handle_call(:wait, from, {state, true}) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "{:reply, state, {state, nil}}")
-      end)
-      GenEx.writeBlock(s, "def handle_call(:wait, from, {state, nil}) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "{:noreply, {state, from}}")
-      end)
-
-      choices = getChoices(p.run, [])
       Enum.map(choices, fn cmd ->
         [case1, case2] = cmd.body
-        GenEx.writeBlock(s, "def handle_call({:#{cmd.label}, true}, _from, {state, waiting}) do", fn s ->
+        GenEx.writeBlock(s, "def handle_cast({:#{cmd.label}, true}, state) do", fn s ->
           Im.Commands.writeEx(s, case1)
-          Im.Gen.Helpers.writeLn(s, "{:reply, %DoneState{}, {%DoneState{}, waiting}}")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, state}")
         end)
-        GenEx.writeBlock(s, "def handle_call({:#{cmd.label}, false}, _from, {state, waiting}) do", fn s ->
+        GenEx.writeBlock(s, "def handle_cast({:#{cmd.label}, false}, state) do", fn s ->
           Im.Commands.writeEx(s, case2)
-          Im.Gen.Helpers.writeLn(s, "{:reply, %DoneState{}, {%DoneState{}, waiting}}")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, state}")
         end)
       end)
 
-      case Enum.take(p.run, 1)  do
-        %Receive{} ->
-          Enum.map(p.run, fn cmd ->
-            Im.Commands.writeEx(s, cmd)
-          end)
-        _ ->
-          GenEx.writeBlock(s, "def start() do", fn s ->
-            Enum.map(p.run, fn cmd ->
-              Im.Commands.writeEx(s, cmd)
-            end)
-          end)
-      end
+      all_cmds = Enum.reduce(subprocesses, p.run, fn (s, acc) -> s.run ++ acc end)
+      recs = getCommands(Im.Commands.Receive, all_cmds, [])
+      Enum.map(recs, fn cmd ->
+          Im.Commands.Receive.writeExRecCallback(s, cmd)
+      end)
 
       Enum.map(subprocesses, fn sp ->
         Im.SubProcess.writeEx(s, sp)
@@ -86,15 +128,19 @@ defmodule Im.Process do
     end)
   end
 
+  # def getAllRcv(%Im.Process{} = p, subprocesses) do
+  #  Enum.map(subprocesses, fn sp -> sp.run end)
+  #   |> Enum.reduce(p.run, fn s, acc -> s ++ acc end)
+  # end
 
-  def getChoices(cmds, acc) do
+  def getCommands(cmdType, cmds, acc) do
     Enum.reduce(cmds, acc, fn cmd, acc ->
       case cmd do
-        %Im.Commands.Choice{} -> [cmd | acc]
+        %^cmdType{} -> [cmd | acc]
         _ ->
           case Map.get(cmd, :body) do
             nil -> acc
-            body -> getChoices(body, acc)
+            body -> getCommands(cmdType, body, acc)
           end
       end
     end)
@@ -104,6 +150,10 @@ defmodule Im.Process do
 
   def stateStr(%Im.Process{} = p) do
     Keyword.keys(p.state) |> Enum.join(", ")
+  end
+
+  def stateMap(%Im.Process{} = p) do
+    Keyword.keys(p.state) |> Enum.map(fn s -> ":#{s} => #{s}" end) |> Enum.join(", ")
   end
 
   def statePidNamesStr(%Im.Process{} = p) do

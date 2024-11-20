@@ -4,7 +4,7 @@ defmodule Im.Gen.Helpers do
     IO.binwrite(state.file, str <> ending)
   end
   def writeLn(%Im.Gen.GenState{} = state, str, indent \\ 0, ending \\ "\n") do
-    write(state, String.duplicate(" ", state.indentation + indent) <> str, ending)
+    write(state, String.duplicate(" ", (state.indentation + indent)*2) <> str, ending)
   end
 
   def getState(state) do

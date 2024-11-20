@@ -6,12 +6,8 @@ defmodule Im.Commands.Choice do
     Im.Gen.Helpers.addNonDeterministicChoice(cmd)
 
     vars = Enum.map(state.bounded_vars, fn var -> ":#{var} => #{var}" end)
-    Im.Gen.Helpers.writeLn(state, "state = %ChoiceState{choice: :#{cmd.label}, vars: %{#{Enum.join(vars, ", ")}}}")
-
-    GenEx.writeBlock(state, "if waiting do", fn s ->
-      Im.Gen.Helpers.writeLn(s, "GenServer.reply(waiting, state)")
-    end)
-    Im.Gen.Helpers.writeLn(state, "waiting = true")
+    Im.Gen.Helpers.writeLn(state, "state = %{#{Enum.join(vars, ", ")}}")
+    Im.Gen.Helpers.writeLn(state, "GenServer.cast(#{state.module_name}Api, %#{state.module_name}Api.Choice#{cmd.label}State{choice: :#{cmd.label}, vars: state})")
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do

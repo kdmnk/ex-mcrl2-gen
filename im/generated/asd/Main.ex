@@ -7,16 +7,17 @@ defmodule Main do
     user2 = User2Api.init()
     IO.puts("Main: User2 started with PID #{inspect(user2.pid)}")
     IO.puts("Main: starting Mach")
-    mach_pid = MachApi.init(user1.pid, user2.pid)
-    IO.puts("Main: Mach started with PID #{inspect(mach_pid.pid)}")
+    mach = MachApi.init(user1.pid, user2.pid)
+    IO.puts("Main: Mach started with PID #{inspect(mach.pid)}")
 
-    MachApi.start()
+    MachApi.start(mach)
 
-    state = User1Api.wait(user1)
-    state = User1Api.chooseAnswer(state, true)
-
-    User2Api.wait(user2)
-    |> User2Api.chooseAnswer(true)
- end
+    User1Api.start(user1)
+    User1Api.wait()
+    |> User1Api.choosechooseAnswer(true)
+    User2Api.start(user2)
+    User2Api.wait()
+    |> User2Api.choosechooseAnswer(false)
+  end
 
 end
