@@ -2,9 +2,9 @@ defmodule Im.SubProcess do
 
   defstruct [:process, :name, :arg, :run]
 
-  def writeMcrl2(%Im.SubProcess{} = p, state) do
+  def writeMcrl2(%Im.SubProcess{} = p, %Im.Gen.GenState{} = state) do
 
-    args = Im.Gen.Helpers.getState(p.arg)
+    args = Im.Gen.Helpers.getState(Keyword.merge(state.module_state, p.arg))
 
     Im.Gen.Helpers.writeLn(state, "#{p.name}(#{args}) = ")
 

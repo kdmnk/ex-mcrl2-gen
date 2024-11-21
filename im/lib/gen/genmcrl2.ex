@@ -8,7 +8,7 @@ defmodule Im.Gen.GenMcrl2 do
     run(folder, conf)
   end
 
-  def run(folder, %{:messageType => messageType, :processes => processes}) do
+  def run(folder, %{:messageType => messageType, :processes => all_process}) do
     state = Im.Gen.GenState.new("#{folder}/specs.mcrl2")
     Im.Gen.Helpers.writeLn(state, "sort MessageType = #{messageType};")
     Im.Gen.Helpers.writeLn(state, "sort Pid = Nat;")
@@ -16,11 +16,26 @@ defmodule Im.Gen.GenMcrl2 do
     Im.Gen.Helpers.writeLn(state, "act")
     Im.Gen.Helpers.writeLn(state, "sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;", +1)
     Im.Gen.Helpers.writeLn(state, "proc")
-    processes
-    |> Enum.map(fn
-      (%Im.Process{} = x) -> Im.Process.writeMcrl2(x, %{state | indentation: state.indentation+1})
-      (%Im.SubProcess{} = x) -> Im.SubProcess.writeMcrl2(x, %{state | indentation: state.indentation+1})
+
+    processes = Enum.filter(all_process, fn
+      %Im.Process{} -> true
+     _ -> false
     end)
+
+    for %Im.Process{identifier: id} = p <- processes do
+
+      subprocesses = Enum.filter(all_process, fn
+        %Im.SubProcess{process: ^id} -> true
+        _ -> false
+      end)
+      module_state = Keyword.merge([pid: "Pid"], p.state)
+      state = %{state | module_state: module_state, indentation: state.indentation+1}
+      Im.Process.writeMcrl2(p, state)
+      subprocesses
+      |> Enum.map(fn x -> Im.SubProcess.writeMcrl2(x, state) end)
+    end
+
+
 
     writeNetwork(state)
     writeInit(state, Enum.filter(processes, fn

@@ -4,7 +4,7 @@ defmodule Im.Process do
   defstruct [:identifier, :state, :run, :test]
 
   def writeMcrl2(%Im.Process{} = p, state) do
-    Im.Gen.Helpers.writeLn(state, "#{p.identifier}(#{Im.Gen.Helpers.getState(p.state)}) = ")
+    Im.Gen.Helpers.writeLn(state, "#{p.identifier}(#{Im.Gen.Helpers.getState(state.module_state)}) = ")
 
     GenMcrl2.writeCmds(Im.Gen.GenState.indent(Im.Gen.GenState.addBoundVars(state, ["pid" | stateList(p)])), p.run)
 

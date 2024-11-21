@@ -55,4 +55,6 @@ defmodule User2Api do
     GenServer.reply(from, choiceState)
     {:noreply, {nil, nil}}
   end
+
 end
+

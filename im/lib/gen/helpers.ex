@@ -8,10 +8,9 @@ defmodule Im.Gen.Helpers do
   end
 
   def getState(state) do
-    extState = Keyword.put(state, :pid, "Pid") # add own pid
-    extState
+    state
     |> Keyword.keys()
-    |> Enum.map(fn s -> "#{s}: #{typeToMcrl2(extState[s])}" end)
+    |> Enum.map(fn s -> "#{s}: #{typeToMcrl2(state[s])}" end)
     |> Enum.join(", ")
   end
 
