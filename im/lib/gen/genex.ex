@@ -25,44 +25,25 @@ defmodule GenEx do
         _ -> false
       end)
 
+      subprocInfo = Enum.map(subprocesses, fn
+        %SubProcess{name: name} = p -> {name, SubProcess.stateList(p)}
+      end)
+      |> Map.new()
+      state = %{state | subprocesses: subprocInfo}
+
       Process.writeEx(state, stateApi, p, subprocesses)
 
       File.close(state.file)
     end
-
-    state = Im.Gen.GenState.new("#{folder}/Main.ex")
-    writeBlock(state, "defmodule Main do", fn s ->
-      writeBlock(s, "def run() do", fn s ->
-        initProcesses(s, processes, [])
-      end)
-
-      # choices = Im.Gen.Helpers.getNonDeterministicChoices()
-      # Enum.map(choices, fn c ->
-      #   writeBlock(s, "def #{c}(module, state) do", fn s ->
-      #     Im.Gen.Helpers.writeLn(s, "#TODO: return value")
-      #     Im.Gen.Helpers.writeLn(s, "true")
-      #   end)
-      # end)
-    end)
   end
 
   def writeCmds(_, []), do: IO.puts("")
+  def writeCmds(state, [%Im.Commands.Receive{} | _]) do
+    Im.Gen.Helpers.writeLn(state, "# Continues from a receive block...")
+  end
   def writeCmds(state, [cmd | cmds]) do
     Im.Commands.writeEx(state, cmd)
     writeCmds(state, cmds)
-  end
-
-  defp initProcesses(_, [], _), do: IO.puts("")
-  defp initProcesses(state, [p | processes], initialised) do
-    state = %{state | module_name: "Main"}
-    if Enum.all?(Keyword.values(p.state), fn {:pid, name} -> String.replace_prefix(to_string(name), "Elixir.", "") in initialised; _ -> true end) do
-      writeLog(state, "starting #{p.identifier}")
-      Im.Gen.Helpers.writeLn(state, "#{Im.Gen.Helpers.pidName(p.identifier)} = #{p.identifier}.start(#{Im.Process.statePidNamesStr(p)})")
-      writeLog(state, "#{p.identifier} started with PID \#{inspect(#{Im.Gen.Helpers.pidName(p.identifier)})}")
-      initProcesses(state, processes, [p.identifier | initialised])
-    else
-      initProcesses(state, processes ++ [p], initialised)
-    end
   end
 
   def writeLog(%Im.Gen.GenState{} = state, str, indentation \\ 0) do
@@ -75,16 +56,16 @@ defmodule GenEx do
     Im.Gen.Helpers.writeLn(state, "end\n")
   end
 
-  def stringifyAST(ast) do
+  def stringifyAST(ast, getVarVals \\ false) do
     case ast do
-      {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
-      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left)} #{op} #{stringifyAST(right)})"
-      [{:|, _pos, [left, right]}] -> "[#{stringifyAST(left)} | #{stringifyAST(right)}]"
-      {:or, _pos, [left, right]} -> "#{stringifyAST(left)} or #{stringifyAST(right)}"
-      {:and, _pos, [left, right]} -> "#{stringifyAST(left)} and #{stringifyAST(right)}"
-      {:!, _pos, right} -> "!#{stringifyAST(right)}"
-      {var, _pos, nil} -> var
-      var when is_atom(var) -> var
+      {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)}"
+      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)})"
+      [{:|, _pos, [left, right]}] -> "[#{stringifyAST(left, getVarVals)} | #{stringifyAST(right, getVarVals)}]"
+      {:or, _pos, [left, right]} -> "#{stringifyAST(left, getVarVals)} or #{stringifyAST(right, getVarVals)}"
+      {:and, _pos, [left, right]} -> "#{stringifyAST(left, getVarVals)} and #{stringifyAST(right, getVarVals)}"
+      {:!, _pos, right} -> "!#{stringifyAST(right, getVarVals)}"
+      {var, _pos, nil} -> stringifyAST(var, getVarVals)
+      var when is_atom(var) -> if(getVarVals, do: "var(state, :#{var})", else: var)
       int when is_integer(int) -> int
       [] -> "[]"
     end

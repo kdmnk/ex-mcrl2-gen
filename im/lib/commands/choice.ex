@@ -3,11 +3,7 @@ defmodule Im.Commands.Choice do
 
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do
-    Im.Gen.Helpers.addNonDeterministicChoice(cmd)
-
-    vars = Enum.map(state.bounded_vars, fn var -> ":#{var} => #{var}" end)
-    Im.Gen.Helpers.writeLn(state, "state = %{#{Enum.join(vars, ", ")}}")
-    Im.Gen.Helpers.writeLn(state, "GenServer.cast(#{state.module_name}Api, %#{state.module_name}Api.Choice#{cmd.label}State{choice: :#{cmd.label}, vars: state})")
+    Im.Gen.Helpers.writeLn(state, "GenServer.cast(#{state.module_name}Api, {:new_choice, %#{state.module_name}Api.Choice#{getStateLabel(cmd)}State{choice: :#{cmd.label}, vars: state}})")
   end
 
   def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Choice{} = cmd) do
@@ -16,9 +12,12 @@ defmodule Im.Commands.Choice do
     Im.Gen.Helpers.writeLn(state, ")", 1)
   end
 
-
   def getState(state) do
     "{"<>Enum.join(state, ", ")<>"}"
+  end
+
+  def getStateLabel(%Im.Commands.Choice{label: label}) do
+    "#{String.upcase(String.at(label, 0))}#{String.slice(label, 1..-1//1)}"
   end
 
 end

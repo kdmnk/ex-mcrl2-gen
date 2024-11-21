@@ -1,12 +1,7 @@
 defmodule Im.Commands.Receive do
   defstruct [:value, :from, :body]
 
-  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = _cmd) do
-    vars = Enum.map(state.bounded_vars, fn var -> ":#{var} => #{var}" end)
-    Im.Gen.Helpers.writeLn(state, "state = %{#{Enum.join(vars, ", ")}}")
-  end
-
-  def writeExRecCallback(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
+  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do
     {newState, newCmd} = boundNewVariables(state, cmd)
 
     Enum.map(cmd.body, fn c ->

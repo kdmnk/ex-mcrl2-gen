@@ -20,7 +20,7 @@ defmodule MachApi do
   end
 
   def init(_) do
-    {:ok, {%{}, nil}}
+    {:ok, {nil, nil}}
   end
 
 end

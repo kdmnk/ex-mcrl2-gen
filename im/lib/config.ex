@@ -60,26 +60,26 @@ defmodule Im.Config do
     call! "receiveMessages", [[], 2]
   end
 
-  subprocess Mach, "receiveMessages", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}, :remaining => :Int} do
+  subprocess Mach, "receiveMessages", %{:msgs => {:list, :Nat}, :remaining => :Int} do
     if! remaining == 0 do
       then! do
-        call! "processAck", [:user1, :user2, :msgs]
+        call! "processAck", [:msgs]
       end
       else! do
-        call! "receiveMsg", [:user1, :user2, :msgs, :remaining]
+        call! "receiveMsg", [:msgs, :remaining]
       end
     end
   end
 
-  subprocess Mach, "receiveMsg", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}, :remaining => :Int} do
+  subprocess Mach, "receiveMsg", %{:msgs => {:list, :Nat}, :remaining => :Int} do
     rcv! {m, some_user} do
       when! m == 1 or m == 2 do
-        call! "receiveMessages", [:user1, :user2, [m | :msgs], :remaining-1]
+        call! "receiveMessages", [[m | :msgs], :remaining-1]
       end
     end
   end
 
-  subprocess Mach, "processAck", %{:user1 => :Pid, :user2 => :Pid, :msgs => {:list, :Nat}} do
+  subprocess Mach, "processAck", %{:msgs => {:list, :Nat}} do
     if! 2 in msgs do
       then! do
         send! user1, rollback

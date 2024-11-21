@@ -3,10 +3,12 @@ defmodule Im.Commands.If do
 
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.If{} = cmd) do
-    GenEx.writeBlock(state, "if (#{Im.Gen.GenMcrl2.stringifyAST(cmd.condition)}) do", fn s ->
+    GenEx.writeBlock(state, "state = if (#{GenEx.stringifyAST(cmd.condition, true)}) do", fn s ->
       GenEx.writeCmds(s, cmd.then)
+      Im.Gen.Helpers.writeLn(s, "state")
       Im.Gen.Helpers.writeLn(s, "else", -1)
       GenEx.writeCmds(s, cmd.else)
+      Im.Gen.Helpers.writeLn(s, "state")
     end)
   end
 

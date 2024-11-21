@@ -27,32 +27,32 @@ defmodule User2Api do
     GenServer.call(__MODULE__, :wait)
   end
 
-  def choosechooseAnswer(%ChoiceChooseAnswerState{}, choice) do
+  def chooseChooseAnswer(%ChoiceChooseAnswerState{}, choice) do
     GenServer.cast(User2, {:chooseAnswer, choice})
   end
 
   def init(_) do
-    {:ok, %{choice_state: nil, choice_received: false, waiting_from: nil}}
+    {:ok, {nil, nil}}
   end
 
-  def handle_call(:wait, _from, %{choice_state: choiceState, choice_received: true, waiting_from: nil}) do
+  def handle_call(:wait, _from, {choiceState, nil}) when not is_nil(choiceState) do
     IO.puts("User2Api: Started waiting. Replying with already updated state.")
-    {:reply, choiceState, %{choice_state: nil, choice_received: false, waiting_from: nil}}
+    {:reply, choiceState, {nil, nil}}
   end
 
-  def handle_call(:wait, from, %{choice_state: nil, choice_received: false, waiting_from: nil}) do
+  def handle_call(:wait, from, {nil, nil}) do
     IO.puts("User2Api: Started waiting.")
-    {:noreply, %{choice_state: nil, choice_received: false, waiting_from: from}}
+    {:noreply, {nil, from}}
   end
 
-  def handle_cast({:new_choice, choiceState}, %{choice_state: nil, choice_received: false, waiting_from: nil}) do
-    {:noreply, %{choice_state: choiceState, choice_received: true, waiting_from: nil}}
+  def handle_cast({:new_choice, choiceState},{nil, nil}) do
+    IO.puts("User2Api: got new state but client is not waiting yet")
+    {:noreply, {choiceState, nil}}
   end
 
-  def handle_cast({:new_choice, choiceState}, %{choice_state: nil, choice_received: false, waiting_from: from}) do
+  def handle_cast({:new_choice, choiceState},{nil, from}) do
     IO.puts("User2Api: replying to wait")
     GenServer.reply(from, choiceState)
-    {:noreply, %{choice_state: nil, choice_received: false, waiting_from: nil}}
+    {:noreply, {nil, nil}}
   end
-
 end

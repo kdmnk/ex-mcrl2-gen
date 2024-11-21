@@ -14,23 +14,21 @@ defmodule Im.SubProcess do
   end
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.SubProcess{} = p) do
-    args = Keyword.keys(p.arg) |> Enum.join(", ")
-    GenEx.writeBlock(state, "def #{p.name}(state, #{args}) do", fn s ->
-      Enum.map(p.run, fn cmd ->
-        Im.Commands.writeEx(s, cmd)
-      end)
+    GenEx.writeBlock(state, "def #{p.name}(state) do", fn s ->
+      GenEx.writeCmds(s, p.run)
+      Im.Gen.Helpers.writeLn(s, "state")
     end)
   end
 
 
-  def stateList(%Im.Process{} = p), do: Keyword.keys(p.state)
+  def stateList(%Im.SubProcess{} = p), do: Keyword.keys(p.arg)
 
-  def stateStr(%Im.Process{} = p) do
-    Keyword.keys(p.state) |> Enum.join(", ")
+  def stateStr(%Im.SubProcess{} = p) do
+    stateList(p) |> Enum.join(", ")
   end
 
-  def statePidNamesStr(%Im.Process{} = p) do
-    Keyword.values(p.state)
+  def statePidNamesStr(%Im.SubProcess{} = p) do
+    Keyword.values(p.arg)
     |> Enum.map(fn {:pid, name} -> Im.Gen.Helpers.pidName(name) end)
     |> Enum.join(", ")
   end

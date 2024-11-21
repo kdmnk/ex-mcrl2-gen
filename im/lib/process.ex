@@ -1,5 +1,4 @@
 defmodule Im.Process do
-  alias Im.Commands.Receive
   alias Im.Gen.GenMcrl2
 
   defstruct [:identifier, :state, :run, :test]
@@ -27,7 +26,7 @@ defmodule Im.Process do
       end)
 
       Enum.map(choices, fn cmd ->
-        GenEx.writeBlock(s, "defmodule Choice#{cmd.label}State do", fn s ->
+        GenEx.writeBlock(s, "defmodule Choice#{Im.Commands.Choice.getStateLabel(cmd)}State do", fn s ->
           Im.Gen.Helpers.writeLn(s, "defstruct [:choice, :vars]")
         end)
       end)
@@ -51,36 +50,36 @@ defmodule Im.Process do
         end)
 
         Enum.map(choices, fn cmd ->
-          GenEx.writeBlock(s, "def choose#{cmd.label}(%Choice#{cmd.label}State{}, choice) do", fn s ->
+          GenEx.writeBlock(s, "def choose#{Im.Commands.Choice.getStateLabel(cmd)}(%Choice#{Im.Commands.Choice.getStateLabel(cmd)}State{}, choice) do", fn s ->
             Im.Gen.Helpers.writeLn(s, "GenServer.cast(#{p.identifier}, {:#{cmd.label}, choice})")
           end)
         end)
       end
 
       GenEx.writeBlock(s, "def init(_) do", fn s ->
-        Im.Gen.Helpers.writeLn(s, "{:ok, {%{}, nil}}")
+        Im.Gen.Helpers.writeLn(s, "{:ok, {nil, nil}}")
       end)
 
       if choices != [] do
-        GenEx.writeBlock(s, "def handle_call(:wait, from, {choiceState, true}) do", fn s ->
+        GenEx.writeBlock(s, "def handle_call(:wait, _from, {choiceState, nil}) when not is_nil(choiceState) do", fn s ->
           GenEx.writeLog(s, "Started waiting. Replying with already updated state.")
-          Im.Gen.Helpers.writeLn(s, "{:reply, choiceState, {%{}, nil}}")
+          Im.Gen.Helpers.writeLn(s, "{:reply, choiceState, {nil, nil}}")
         end)
 
-        GenEx.writeBlock(s, "def handle_call(:wait, from, {state, nil}) do", fn s ->
+        GenEx.writeBlock(s, "def handle_call(:wait, from, {nil, nil}) do", fn s ->
           GenEx.writeLog(s, "Started waiting.")
-          Im.Gen.Helpers.writeLn(s, "{:noreply, {state, from}}")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, {nil, from}}")
         end)
 
 
-        GenEx.writeBlock(s, "def handle_cast({:new_choice, choiceState},{_, waiting}) do", fn s ->
-          GenEx.writeBlock(s, "if waiting do", fn s ->
-            GenEx.writeLog(s, "replying to wait")
-            Im.Gen.Helpers.writeLn(s, "GenServer.reply(waiting, choiceState)")
-            Im.Gen.Helpers.writeLn(s, "{:noreply, {%{}, nil}}")
-            Im.Gen.Helpers.writeLn(s, "else", -1)
-            Im.Gen.Helpers.writeLn(s, "{:noreply, {choiceState, true}}")
-          end)
+        GenEx.writeBlock(s, "def handle_cast({:new_choice, choiceState},{nil, nil}) do", fn s ->
+          GenEx.writeLog(s, "got new state but client is not waiting yet")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, {choiceState, nil}}")
+        end)
+        GenEx.writeBlock(s, "def handle_cast({:new_choice, choiceState},{nil, from}) do", fn s ->
+          GenEx.writeLog(s, "replying to wait")
+          Im.Gen.Helpers.writeLn(s, "GenServer.reply(from, choiceState)")
+          Im.Gen.Helpers.writeLn(s, "{:noreply, {nil, nil}}")
         end)
       end
     end)
@@ -99,19 +98,18 @@ defmodule Im.Process do
       end)
 
       GenEx.writeBlock(s, "def handle_cast(:start, state) do", fn s ->
-        Enum.map(p.run, fn cmd ->
-          Im.Commands.writeEx(s, cmd)
-        end)
+        GenEx.writeCmds(s, p.run)
+        Im.Gen.Helpers.writeLn(s, "{:noreply, state}")
       end)
 
       Enum.map(choices, fn cmd ->
         [case1, case2] = cmd.body
         GenEx.writeBlock(s, "def handle_cast({:#{cmd.label}, true}, state) do", fn s ->
-          Im.Commands.writeEx(s, case1)
+          GenEx.writeCmds(s, [case1])
           Im.Gen.Helpers.writeLn(s, "{:noreply, state}")
         end)
         GenEx.writeBlock(s, "def handle_cast({:#{cmd.label}, false}, state) do", fn s ->
-          Im.Commands.writeEx(s, case2)
+          GenEx.writeCmds(s, [case2])
           Im.Gen.Helpers.writeLn(s, "{:noreply, state}")
         end)
       end)
@@ -119,11 +117,19 @@ defmodule Im.Process do
       all_cmds = Enum.reduce(subprocesses, p.run, fn (s, acc) -> s.run ++ acc end)
       recs = getCommands(Im.Commands.Receive, all_cmds, [])
       Enum.map(recs, fn cmd ->
-          Im.Commands.Receive.writeExRecCallback(s, cmd)
+          Im.Commands.Receive.writeEx(s, cmd)
       end)
 
       Enum.map(subprocesses, fn sp ->
         Im.SubProcess.writeEx(s, sp)
+      end)
+
+      GenEx.writeBlock(s, "defp updateState(state, new_map) do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "Enum.reduce(new_map, state, fn {k, v}, acc -> Map.put(acc, k, v) end)")
+      end)
+
+      GenEx.writeBlock(s, "defp var(state, key) do", fn s ->
+        Im.Gen.Helpers.writeLn(s, "Map.get(state, key, key)")
       end)
     end)
   end

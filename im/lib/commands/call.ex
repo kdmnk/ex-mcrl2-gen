@@ -8,18 +8,11 @@ defmodule Im.Commands.Call do
   end
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Call{} = cmd) do
-    args = Enum.map(cmd.arg, fn x ->
-      x = GenEx.stringifyAST(x)
-      if is_atom(x) do
-        "Map.get(state, :#{x}, #{x})"
-      else
-        x
-      end
-
-    end)
-
-
-    Im.Gen.Helpers.writeLn(state, "#{cmd.name}(state, #{Enum.join(args, ", ")})")
+    argNames = state.subprocesses[cmd.name]
+    argVals = Enum.map(cmd.arg, fn x -> GenEx.stringifyAST(x, true) end)
+    args = Enum.zip(argNames, argVals) |> Enum.map(fn {x, y} -> ":#{x} => #{y}" end)
+    Im.Gen.Helpers.writeLn(state, "state = updateState(state, %{#{Enum.join(args, ", ")}})")
+    Im.Gen.Helpers.writeLn(state, "state = #{cmd.name}(state)")
   end
 
   # def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Receive{} = cmd) do

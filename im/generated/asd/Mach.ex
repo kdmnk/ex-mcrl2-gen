@@ -37,34 +37,39 @@ defmodule Mach do
 
   def receiveMessages(state) do
     state = if (var(state, :remaining) == 0) do
-      state = updateState(state, %{msgs: var(state, :msgs)})
+      state = updateState(state, %{:msgs => var(state, :msgs)})
       state = processAck(state)
       state
     else
-      state = updateState(state, %{msgs: var(state, :msgs), remaining: var(state, :remaining)})
+      state = updateState(state, %{:msgs => var(state, :msgs), :remaining => var(state, :remaining)})
       state = receiveMsg(state)
       state
     end
+
     state
   end
 
   def receiveMsg(state) do
-    # waiting for message, do nothing
+    # Continues from a receive block...
     state
   end
 
   def processAck(state) do
-    if (2 in var(state, :msgs)) do
+    state = if (2 in var(state, :msgs)) do
       IO.puts("Mach: sending #{inspect(5)} to #{inspect(var(state, :user1))}")
       GenServer.cast(var(state, :user1), {self(), 5})
       IO.puts("Mach: sending #{inspect(5)} to #{inspect(var(state, :user2))}")
       GenServer.cast(var(state, :user2), {self(), 5})
+      state
     else
       IO.puts("Mach: sending #{inspect(3)} to #{inspect(var(state, :user1))}")
       GenServer.cast(var(state, :user1), {self(), 3})
       IO.puts("Mach: sending #{inspect(3)} to #{inspect(var(state, :user2))}")
       GenServer.cast(var(state, :user2), {self(), 3})
+      state
     end
+
+    # Continues from a receive block...
     state
   end
 
@@ -77,3 +82,4 @@ defmodule Mach do
   end
 
 end
+
