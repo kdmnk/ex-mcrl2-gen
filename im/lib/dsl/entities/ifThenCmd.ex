@@ -10,7 +10,8 @@ defmodule Im.Dsl.Entities.IfThenCmd do
     entities: [body: [
       Im.Dsl.Entities.SendCommand.cmd,
       Im.Dsl.Entities.ChoiceCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd
+      Im.Dsl.Entities.CallCmd.cmd,
+      Im.Dsl.Entities.StateCmd.cmd
     ]]
   }
 

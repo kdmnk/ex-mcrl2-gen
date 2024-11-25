@@ -11,7 +11,8 @@ defmodule Im.Dsl.Entities.ChoiceCmd do
       ],
     ],
     entities: [body: [
-      Im.Dsl.Entities.SendCommand.cmd
+      Im.Dsl.Entities.SendCommand.cmd,
+      Im.Dsl.Entities.StateCmd.cmd
     ]]
   }
 

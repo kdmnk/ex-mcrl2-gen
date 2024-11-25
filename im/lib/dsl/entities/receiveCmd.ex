@@ -12,8 +12,7 @@ defmodule Im.Dsl.Entities.ReceiveCmd do
       ]
     ],
     entities: [body: [
-      Im.Dsl.Entities.ReceiveCaseCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd
+      Im.Dsl.Entities.ReceiveCaseCmd.cmd
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

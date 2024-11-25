@@ -35,6 +35,7 @@ defmodule Im.Config do
         send! server, ack
       end
     end
+    call! "User1", []
   end
 
   process User2, %{} do
@@ -52,6 +53,7 @@ defmodule Im.Config do
         send! server, ack
       end
     end
+    call! "User2", []
   end
 
   process Mach, %{user1 => {:pid, User1}, user2 => {:pid, User2}} do
@@ -92,14 +94,15 @@ defmodule Im.Config do
     end
     rcv! {m, some_user} do
       when! m == 4 do
-
+        state! :tau
       end
     end
     rcv! {m, some_user} do
       when! m == 4 do
-
+        state! :tau
       end
     end
+    call! "Mach", []
   end
 
 

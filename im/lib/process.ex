@@ -7,8 +7,7 @@ defmodule Im.Process do
     Im.Gen.Helpers.writeLn(state, "#{p.identifier}(#{Im.Gen.Helpers.getState(state.module_state)}) = ")
 
     GenMcrl2.writeCmds(Im.Gen.GenState.indent(Im.Gen.GenState.addBoundVars(state, ["pid" | stateList(p)])), p.run)
-
-    Im.Gen.Helpers.writeLn(state, ". #{p.identifier}();", +1)
+    Im.Gen.Helpers.writeLn(state, ";")
   end
 
   def writeEx(%Im.Gen.GenState{} = state, %Im.Gen.GenState{} = stateApi, %Im.Process{} = p, subprocesses) do

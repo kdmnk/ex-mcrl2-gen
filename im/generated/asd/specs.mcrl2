@@ -5,43 +5,50 @@ act
   sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
 proc
   User1(pid: Pid) = 
-    sum server : Pid . sum m : MessageType . (
+    (sum server : Pid . sum m : MessageType . (
       (m == 0) -> (receiveMessage(pid, server, m) . 
-        (tau .
-        sendMessage(pid, server, 1)
-        + tau .
-        sendMessage(pid, server, 2)
-        ))
-      +
+          (tau .
+          sendMessage(pid, server, 1)
+          + tau .
+          sendMessage(pid, server, 2)
+          )
+      ) +
       (m == 3) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 4))
-      +
+        sendMessage(pid, server, 4)
+      ) +
       (m == 5) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 4))
-    )
-    . User1();
+        sendMessage(pid, server, 4)
+      )
+    ))
+    .
+    User1(pid)
+  ;
   User2(pid: Pid) = 
-    sum server : Pid . sum m : MessageType . (
+    (sum server : Pid . sum m : MessageType . (
       (m == 0) -> (receiveMessage(pid, server, m) . 
-        (tau .
-        sendMessage(pid, server, 1)
-        + tau .
-        sendMessage(pid, server, 2)
-        ))
-      +
+          (tau .
+          sendMessage(pid, server, 1)
+          + tau .
+          sendMessage(pid, server, 2)
+          )
+      ) +
       (m == 3) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 4))
-      +
+        sendMessage(pid, server, 4)
+      ) +
       (m == 5) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 4))
-    )
-    . User2();
+        sendMessage(pid, server, 4)
+      )
+    ))
+    .
+    User2(pid)
+  ;
   Mach(pid: Pid, user1: Pid, user2: Pid) = 
     sendMessage(pid, user1, 0)
     .
     sendMessage(pid, user2, 0)
     .
-    receiveMessages(pid, user1, user2, [], 2);
+    receiveMessages(pid, user1, user2, [], 2)
+  ;
   receiveMessages(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat), remaining: Int) = 
     (remaining == 0) -> (
       processAck(pid, user1, user2, msgs)
@@ -51,8 +58,11 @@ proc
     )
   ;
   receiveMsg(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat), remaining: Int) = 
-    sum some_user : Pid . sum m : MessageType . (m == 1 || m == 2) -> receiveMessage(pid, some_user, m) . 
-      receiveMessages(pid, user1, user2, m |> msgs, remaining - 1)
+    (sum some_user : Pid . sum m : MessageType . (
+      (m == 1 || m == 2) -> (receiveMessage(pid, some_user, m) . 
+        receiveMessages(pid, user1, user2, m |> msgs, remaining - 1)
+      )
+    ))
   ;
   processAck(pid: Pid, user1: Pid, user2: Pid, msgs: List(Nat)) = 
     (2 in msgs) -> (
@@ -66,9 +76,17 @@ proc
       sendMessage(pid, user2, 3)
     )
     .
-    (sum some_user : Pid . sum m : MessageType . (m == 4) -> receiveMessage(pid, some_user, m) . tau)
+    (sum some_user : Pid . sum m : MessageType . (
+      (m == 4) -> (receiveMessage(pid, some_user, m) . 
+        tau
+      )
+    ))
     .
-    (sum some_user : Pid . sum m : MessageType . (m == 4) -> receiveMessage(pid, some_user, m) . tau)
+    (sum some_user : Pid . sum m : MessageType . (
+      (m == 4) -> (receiveMessage(pid, some_user, m) . 
+        tau
+      )
+    ))
     .
     Mach(pid, user1, user2)
   ;
@@ -81,5 +99,5 @@ proc
 init
   allow({outgoingMessage, incomingMessage},
     comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-    User1(432) || User2(2202) || Mach(6663, 432, 2202) || Network({})
+    User1(7820) || User2(1482) || Mach(4743, 7820, 1482) || Network({})
 ));
