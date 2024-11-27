@@ -3,6 +3,6 @@ defmodule ImTest do
   doctest Im
 
   test "greets the world" do
-    assert Im.hello() == :world
+    assert hello() == :world
   end
 end

@@ -5,6 +5,10 @@ defmodule User2Api do
     defstruct [:pid]
   end
 
+  defmodule IdleState do
+    defstruct []
+  end
+
   defmodule ChoiceChooseAnswerState do
     defstruct [:choice, :vars]
   end
@@ -21,14 +25,16 @@ defmodule User2Api do
 
   def start(%InitState{}) do
     GenServer.cast(User2, :start)
+    %IdleState{}
   end
 
-  def wait() do
+  def wait(%IdleState{}) do
     GenServer.call(__MODULE__, :wait)
   end
 
   def chooseChooseAnswer(%ChoiceChooseAnswerState{}, choice) do
     GenServer.cast(User2, {:chooseAnswer, choice})
+    %IdleState{}
   end
 
   def init(_) do

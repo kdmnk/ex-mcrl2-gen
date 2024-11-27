@@ -1,17 +1,18 @@
-defmodule Im.Dsl.Entities.IfThenCmd do
+defmodule Dsl.Entities.IfThenCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :then!,
     describe: "",
-    target: Im.Commands.IfThen,
+    target: Commands.IfThen,
     args: [],
     schema: [
     ],
     entities: [body: [
-      Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.ChoiceCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd,
-      Im.Dsl.Entities.StateCmd.cmd
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.CallCmd.cmd,
+      Dsl.Entities.CallRecurseCmd.cmd,
+      Dsl.Entities.StateCmd.cmd
     ]]
   }
 

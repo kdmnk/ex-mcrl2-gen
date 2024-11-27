@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Entities.IfCmd do
+defmodule Dsl.Entities.IfCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :if!,
     describe: "If condition holds, continue to then! child entity, otherwise, continue with else! child entity.",
-    target: Im.Commands.If,
+    target: Commands.If,
     args: [:condition],
     schema: [
       condition: [
@@ -11,9 +11,9 @@ defmodule Im.Dsl.Entities.IfCmd do
       ]
     ],
     entities: [else: [
-      Im.Dsl.Entities.IfElseCmd.cmd,
+      Dsl.Entities.IfElseCmd.cmd,
     ], then: [
-      Im.Dsl.Entities.IfThenCmd.cmd,
+      Dsl.Entities.IfThenCmd.cmd,
     ]]
   }
 

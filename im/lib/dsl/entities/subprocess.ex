@@ -1,9 +1,9 @@
-defmodule Im.Dsl.SubProcess do
+defmodule Dsl.Entities.SubProcess do
   def process, do: %Spark.Dsl.Entity{
     name: :subprocess,
     describe: "A subprocess.",
     args: [:process, :name, :arg],
-    target: Im.SubProcess,
+    target:  Processes.SubProcess,
     schema: [
       process: [
         type: :atom
@@ -21,11 +21,12 @@ defmodule Im.Dsl.SubProcess do
       ]
     ],
     entities: [run: [
-      Im.Dsl.Entities.IfCmd.cmd,
-      Im.Dsl.Entities.ReceiveCmd.cmd,
-      Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.ChoiceCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd
+      Dsl.Entities.IfCmd.cmd,
+      Dsl.Entities.ReceiveCmd.cmd,
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.CallCmd.cmd,
+      Dsl.Entities.CallRecurseCmd.cmd,
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Process do
+defmodule Dsl.Entities.Process do
   def process, do: %Spark.Dsl.Entity{
     name: :process,
     describe: "A process that defines commands.",
     args: [:identifier, :state],
-    target: Im.Process,
+    target: Processes.Process,
     schema: [
       identifier: [
         type: :atom
@@ -14,11 +14,12 @@ defmodule Im.Dsl.Process do
       ]
     ],
     entities: [run: [
-      Im.Dsl.Entities.ReceiveCmd.cmd,
-      Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.ChoiceCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd,
-      Im.Dsl.Entities.IfCmd.cmd
+      Dsl.Entities.ReceiveCmd.cmd,
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.CallCmd.cmd,
+      Dsl.Entities.CallRecurseCmd.cmd,
+      Dsl.Entities.IfCmd.cmd
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

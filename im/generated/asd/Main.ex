@@ -13,10 +13,11 @@ defmodule Main do
     MachApi.start(mach)
 
     User1Api.start(user1)
-    User1Api.wait()
+    |> User1Api.wait()
     |> User1Api.chooseChooseAnswer(true)
+
     User2Api.start(user2)
-    User2Api.wait()
+    |> User2Api.wait()
     |> User2Api.chooseChooseAnswer(false)
   end
 

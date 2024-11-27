@@ -1,8 +1,21 @@
-sort MessageType = Nat;
 sort Pid = Nat;
+sort MessageType = Nat;
 sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);
+
+map LOSSY_NETWORK : Bool;
+eqn LOSSY_NETWORK = true;
+
+map User1_PID : Pid;
+eqn User1_PID = 61;
+map User2_PID : Pid;
+eqn User2_PID = 62;
+map Mach_PID : Pid;
+eqn Mach_PID = 97;
+
+
 act
   sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
+  lose;
 proc
   User1(pid: Pid) = 
     (sum server : Pid . sum m : MessageType . (
@@ -84,20 +97,23 @@ proc
     .
     (sum some_user : Pid . sum m : MessageType . (
       (m == 4) -> (receiveMessage(pid, some_user, m) . 
-        tau
+        Mach(pid, user1, user2)
       )
     ))
-    .
-    Mach(pid, user1, user2)
   ;
-  Network(msgs: FSet(Message)) =
-    sum sender : Pid,  receiver : Pid, msg: MessageType . networkReceiveMessage(sender, receiver, msg)
-    . Network(msgs = msgs + {Message(sender, receiver, msg)})
-    +
-    sum msg: Message . (msg in msgs) -> networkSendMessage(receiverID(msg), senderID(msg), message(msg))
-    . Network(msgs = msgs - {msg});
+Network(msgs: FSet(Message)) =
+  (sum sender : Pid,  receiver : Pid, msg: MessageType .
+    networkReceiveMessage(sender, receiver, msg) .
+    Network(msgs = msgs + {Message(sender, receiver, msg)})
+  )
+  +
+  (sum msg: Message . (msg in msgs) ->
+    (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
+      + ((LOSSY_NETWORK) -> lose)
+    ) . Network(msgs = msgs - {msg}));
 init
-  allow({outgoingMessage, incomingMessage},
-    comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
-    User1(7820) || User2(1482) || Mach(4743, 7820, 1482) || Network({})
-));
+  allow({outgoingMessage, incomingMessage, lose},
+  comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
+    User1(User1_PID) || User2(User2_PID) || Mach(Mach_PID, User1_PID, User2_PID) || Network({})
+  )
+);

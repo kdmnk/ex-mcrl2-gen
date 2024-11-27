@@ -1,6 +1,7 @@
-defmodule GenEx do
-  alias Im.SubProcess
-  alias Im.Process
+defmodule Gen.GenEx do
+  alias Processes.Process
+  alias Processes.SubProcess
+
   def main() do
     folder = "./generated/asd"
     :ok = File.mkdir_p(folder)
@@ -17,8 +18,8 @@ defmodule GenEx do
     end)
 
     for %Process{identifier: id} = p <- processes do
-      state = Im.Gen.GenState.new("#{folder}/#{p.identifier}.ex")
-      stateApi = Im.Gen.GenState.new("#{folder}/#{p.identifier}Api.ex")
+      state = Gen.GenState.new("#{folder}/#{p.identifier}.ex")
+      stateApi = Gen.GenState.new("#{folder}/#{p.identifier}Api.ex")
 
       subprocesses = Enum.filter(all_process, fn
         %SubProcess{process: ^id} -> true
@@ -38,22 +39,22 @@ defmodule GenEx do
   end
 
   def writeCmds(_, []), do: IO.puts("")
-  def writeCmds(state, [%Im.Commands.Receive{} | _]) do
-    Im.Gen.Helpers.writeLn(state, "# Continues from a receive block...")
+  def writeCmds(state, [%Commands.Receive{} | _]) do
+    Gen.Helpers.writeLn(state, "# Continues from a receive block...")
   end
   def writeCmds(state, [cmd | cmds]) do
-    Im.Commands.writeEx(state, cmd)
+    Commands.Command.writeEx(state, cmd)
     writeCmds(state, cmds)
   end
 
-  def writeLog(%Im.Gen.GenState{} = state, str, indentation \\ 0) do
-    Im.Gen.Helpers.writeLn(state, "IO.puts(\"#{state.module_name}: #{str}\")", indentation)
+  def writeLog(%Gen.GenState{} = state, str, indentation \\ 0) do
+    Gen.Helpers.writeLn(state, "IO.puts(\"#{state.module_name}: #{str}\")", indentation)
   end
 
-  def writeBlock(%Im.Gen.GenState{} = state, str, child) do
-    Im.Gen.Helpers.writeLn(state, str)
-    child.(Im.Gen.GenState.indent(state))
-    Im.Gen.Helpers.writeLn(state, "end\n")
+  def writeBlock(%Gen.GenState{} = state, str, child) do
+    Gen.Helpers.writeLn(state, str)
+    child.(Gen.GenState.indent(state))
+    Gen.Helpers.writeLn(state, "end\n")
   end
 
   def stringifyAST(ast, getVarVals \\ false) do

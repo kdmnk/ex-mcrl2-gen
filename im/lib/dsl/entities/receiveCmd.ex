@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Entities.ReceiveCmd do
+defmodule Dsl.Entities.ReceiveCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :rcv!,
     describe: "Receive command.",
-    target: Im.Commands.Receive,
+    target: Commands.Receive,
     args: [:value],
     schema: [
       value: [
@@ -12,7 +12,7 @@ defmodule Im.Dsl.Entities.ReceiveCmd do
       ]
     ],
     entities: [body: [
-      Im.Dsl.Entities.ReceiveCaseCmd.cmd
+      Dsl.Entities.ReceiveCaseCmd.cmd
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

@@ -1,11 +1,11 @@
-defmodule Im.Commands.State do
+defmodule Commands.State do
   defstruct [:state]
 
-  def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.State{} = cmd) do
-    Im.Gen.Helpers.writeLn(state, "#{cmd.state}")
+  def writeMcrl2(%Gen.GenState{} = state, %Commands.State{} = cmd) do
+    Gen.Helpers.writeLn(state, "#{cmd.state}")
   end
 
-  def writeEx(%Im.Gen.GenState{}, %Im.Commands.State{}) do
+  def writeEx(%Gen.GenState{}, %Commands.State{}) do
 
   end
 

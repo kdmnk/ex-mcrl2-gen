@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Entities.ReceiveCaseCmd do
+defmodule Dsl.Entities.ReceiveCaseCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :when!,
     describe: "Receive case command.",
-    target: Im.Commands.ReceiveCase,
+    target: Commands.ReceiveCase,
     args: [:condition],
     schema: [
       condition: [
@@ -11,10 +11,11 @@ defmodule Im.Dsl.Entities.ReceiveCaseCmd do
       ]
     ],
     entities: [body: [
-      Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.ChoiceCmd.cmd,
-      Im.Dsl.Entities.StateCmd.cmd,
-      Im.Dsl.Entities.CallCmd.cmd,
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.StateCmd.cmd,
+      Dsl.Entities.CallCmd.cmd,
+      Dsl.Entities.CallRecurseCmd.cmd,
     ]]
   }
 end

@@ -1,9 +1,9 @@
-defmodule Im.Dsl.Entities.ChoiceCmd do
+defmodule Dsl.Entities.ChoiceCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :choice!,
     describe: "Non deterministic choice.",
-    target: Im.Commands.Choice,
+    target: Commands.Choice,
     args: [:label],
     schema: [
       label: [
@@ -11,8 +11,8 @@ defmodule Im.Dsl.Entities.ChoiceCmd do
       ],
     ],
     entities: [body: [
-      Im.Dsl.Entities.SendCommand.cmd,
-      Im.Dsl.Entities.StateCmd.cmd
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.StateCmd.cmd
     ]]
   }
 

@@ -1,6 +1,6 @@
-defmodule Im.Config do
-  use Im.Dsl.Im,
-    extensions: [Im.Dsl.Root]
+defmodule Protocols.TwoPhasedCommit do
+  use Dsl.Im,
+    extensions: [Dsl.Root]
 
   #variables
   user1 = :user1
@@ -19,6 +19,7 @@ defmodule Im.Config do
   rollback = 5
 
   messageType :Nat
+  lossyNetwork true
 
   process User1, %{} do
     rcv! {m, server} do
@@ -35,7 +36,7 @@ defmodule Im.Config do
         send! server, ack
       end
     end
-    call! "User1", []
+    recurse! do: nil
   end
 
   process User2, %{} do
@@ -53,7 +54,7 @@ defmodule Im.Config do
         send! server, ack
       end
     end
-    call! "User2", []
+    recurse! do: nil
   end
 
   process Mach, %{user1 => {:pid, User1}, user2 => {:pid, User2}} do
@@ -99,10 +100,9 @@ defmodule Im.Config do
     end
     rcv! {m, some_user} do
       when! m == 4 do
-        state! :tau
+        recurse! do: nil
       end
     end
-    call! "Mach", []
   end
 
 

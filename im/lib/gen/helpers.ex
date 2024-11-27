@@ -1,9 +1,9 @@
-defmodule Im.Gen.Helpers do
+defmodule Gen.Helpers do
 
-  def write(%Im.Gen.GenState{} = state, str, ending \\ "") do
+  def write(%Gen.GenState{} = state, str, ending \\ "") do
     IO.binwrite(state.file, str <> ending)
   end
-  def writeLn(%Im.Gen.GenState{} = state, str, indent \\ 0, ending \\ "\n") do
+  def writeLn(%Gen.GenState{} = state, str, indent \\ 0, ending \\ "\n") do
     write(state, String.duplicate(" ", (state.indentation + indent)*2) <> str, ending)
   end
 
@@ -53,7 +53,7 @@ defmodule Im.Gen.Helpers do
   end
   def join(state, callback, [l | ls], separator) do
     callback.(l)
-    Im.Gen.Helpers.writeLn(state, separator)
+    Gen.Helpers.writeLn(state, separator)
     join(state, callback, ls, separator)
   end
 

@@ -5,6 +5,10 @@ defmodule MachApi do
     defstruct [:pid]
   end
 
+  defmodule IdleState do
+    defstruct []
+  end
+
   def init(user1, user2) do
     if Process.whereis(Mach) do
       GenServer.stop(Mach)
@@ -17,6 +21,7 @@ defmodule MachApi do
 
   def start(%InitState{}) do
     GenServer.cast(Mach, :start)
+    %IdleState{}
   end
 
   def init(_) do

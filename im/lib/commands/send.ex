@@ -1,14 +1,14 @@
-defmodule Im.Commands.Send do
+defmodule Commands.Send do
   defstruct [:to, :message]
 
 
-  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.Send{} = cmd) do
-    GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(var(state, :#{cmd.to}))}")
-    Im.Gen.Helpers.writeLn(state, "GenServer.cast(var(state, :#{cmd.to}), {self(), #{cmd.message}})")
+  def writeEx(%Gen.GenState{} = state, %Commands.Send{} = cmd) do
+    Gen.GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(var(state, :#{cmd.to}))}")
+    Gen.Helpers.writeLn(state, "GenServer.cast(var(state, :#{cmd.to}), {self(), #{cmd.message}})")
   end
 
-  def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.Send{} = cmd) do
-    Im.Gen.Helpers.writeLn(state, "sendMessage(pid, #{cmd.to}, #{cmd.message})")
+  def writeMcrl2(%Gen.GenState{} = state, %Commands.Send{} = cmd) do
+    Gen.Helpers.writeLn(state, "sendMessage(pid, #{cmd.to}, #{cmd.message})")
   end
 
 end

@@ -1,13 +1,13 @@
-defmodule Im.Commands.IfElse do
+defmodule Commands.IfElse do
   defstruct [:body]
 
 
-  def writeEx(%Im.Gen.GenState{} = state, %Im.Commands.IfElse{} = cmd) do
-    GenEx.writeCmds(state, cmd.body)
+  def writeEx(%Gen.GenState{} = state, %Commands.IfElse{} = cmd) do
+    Gen.GenEx.writeCmds(state, cmd.body)
   end
 
-  def writeMcrl2(%Im.Gen.GenState{} = state, %Im.Commands.IfElse{} = cmd) do
-    Im.Gen.GenMcrl2.writeCmds(state, cmd.body)
+  def writeMcrl2(%Gen.GenState{} = state, %Commands.IfElse{} = cmd) do
+    Gen.GenMcrl2.writeCmds(state, cmd.body)
   end
 
 end

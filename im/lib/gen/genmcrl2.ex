@@ -1,4 +1,6 @@
-defmodule Im.Gen.GenMcrl2 do
+defmodule Gen.GenMcrl2 do
+  alias Processes.Process
+  alias Processes.SubProcess
 
   def main() do
     folder = "./generated/asd"
@@ -8,88 +10,93 @@ defmodule Im.Gen.GenMcrl2 do
     run(folder, conf)
   end
 
-  def run(folder, %{:messageType => messageType, :processes => all_process}) do
-    state = Im.Gen.GenState.new("#{folder}/specs.mcrl2")
-    Im.Gen.Helpers.writeLn(state, "sort MessageType = #{messageType};")
-    Im.Gen.Helpers.writeLn(state, "sort Pid = Nat;")
-    Im.Gen.Helpers.writeLn(state, "sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);")
-    Im.Gen.Helpers.writeLn(state, "act")
-    Im.Gen.Helpers.writeLn(state, "sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;", +1)
-    Im.Gen.Helpers.writeLn(state, "proc")
-
+  def run(folder, %{:messageType => messageType, :lossyNetwork => lossyNetwork, :processes => all_process}) do
+    state = Gen.GenState.new("#{folder}/specs.mcrl2")
     processes = Enum.filter(all_process, fn
-      %Im.Process{} -> true
+      %Process{} -> true
      _ -> false
     end)
 
-    for %Im.Process{identifier: id} = p <- processes do
+    Gen.Helpers.write(state, getDeclarationsString(messageType, lossyNetwork, processes))
 
+    for %Process{identifier: id} = p <- processes do
       subprocesses = Enum.filter(all_process, fn
-        %Im.SubProcess{process: ^id} -> true
+        %SubProcess{process: ^id} -> true
         _ -> false
       end)
       module_state = Keyword.merge([pid: "Pid"], p.state)
-      state = %{state | module_state: module_state, indentation: state.indentation+1}
-      Im.Process.writeMcrl2(p, state)
+      state = %{state | module_name: p.identifier, module_state: module_state, indentation: state.indentation+1}
+      Process.writeMcrl2(p, state)
       subprocesses
-      |> Enum.map(fn x -> Im.SubProcess.writeMcrl2(x, state) end)
+      |> Enum.map(fn x -> SubProcess.writeMcrl2(x, state) end)
     end
 
-
-
-    writeNetwork(state)
-    writeInit(state, Enum.filter(processes, fn
-      (%Im.Process{}) -> true
-      _ -> false
-      end))
+    Gen.Helpers.write(state, getNetworkString())
+    Gen.Helpers.write(state, getInitString(processes))
 
     File.close(state.file)
   end
 
 
   def writeCmds(state, cmds, separator \\ "."), do:
-    Im.Gen.Helpers.join(
+    Gen.Helpers.join(
       state,
-      fn (cmd) -> Im.Commands.writeMcrl2(state, cmd) end,
+      fn (cmd) -> Commands.Command.writeMcrl2(state, cmd) end,
       cmds,
       separator
     )
 
-  defp writeNetwork(state) do
-    Im.Gen.Helpers.writeLn(state, "Network(msgs: FSet(Message)) =", 1)
-    Im.Gen.Helpers.writeLn(state, "sum sender : Pid,  receiver : Pid, msg: MessageType . networkReceiveMessage(sender, receiver, msg)", 2)
-    Im.Gen.Helpers.writeLn(state, ". Network(msgs = msgs + {Message(sender, receiver, msg)})", 2)
-    Im.Gen.Helpers.writeLn(state, "+", 2)
-    Im.Gen.Helpers.writeLn(state, "sum msg: Message . (msg in msgs) -> networkSendMessage(receiverID(msg), senderID(msg), message(msg))", 2)
-    Im.Gen.Helpers.writeLn(state, ". Network(msgs = msgs - {msg});", 2)
+  defp getDeclarationsString(messageType, lossyNetwork, processes) do
+    randomPids = Enum.map(processes, fn p -> "map #{p.identifier}_PID : Pid;\neqn #{p.identifier}_PID = #{:rand.uniform(100)};\n" end)
+
+    """
+    sort Pid = Nat;
+    sort MessageType = #{messageType};
+    sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);
+
+    map LOSSY_NETWORK : Bool;
+    eqn LOSSY_NETWORK = #{lossyNetwork};
+
+    #{Enum.join(randomPids, "")}
+
+    act
+      sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
+      lose;
+    proc
+    """
   end
 
-  defp writeInit(file, processes) do
+  defp getNetworkString(), do: """
+    Network(msgs: FSet(Message)) =
+      (sum sender : Pid,  receiver : Pid, msg: MessageType .
+        networkReceiveMessage(sender, receiver, msg) .
+        Network(msgs = msgs + {Message(sender, receiver, msg)})
+      )
+      +
+      (sum msg: Message . (msg in msgs) ->
+        (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
+          + ((LOSSY_NETWORK) -> lose)
+        ) . Network(msgs = msgs - {msg}));
+    """
 
-    Im.Gen.Helpers.writeLn(file, "init", 0)
-    Im.Gen.Helpers.writeLn(file, "allow({outgoingMessage, incomingMessage},", 1)
-    Im.Gen.Helpers.writeLn(file, "comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},", 2)
-    pids = Enum.reduce(processes, %{}, fn p, acc ->
-      Map.put(acc, p.identifier, :rand.uniform(10000))
-    end)
+  defp getInitString(processes) do
+    pr = processes
+      |> Enum.map(fn p ->
+        "#{p.identifier}(" <>
+        (["#{p.identifier}_PID" | Enum.map(Keyword.values(p.state), fn {:pid, v} -> "#{v}_PID" end)]
+        |> Enum.join(", "))
+        <> ")"
+      end)
+      |> Enum.join(" || ")
 
-    Im.Gen.Helpers.writeLn(file, "", 2, "")
-    for p <- processes do
-      Im.Gen.Helpers.write(file, "#{p.identifier}(#{pids[p.identifier]}")
-      for s <- Keyword.values(p.state) do
-        Im.Gen.Helpers.write(file, ", #{initialState(s, pids)}")
-      end
-      Im.Gen.Helpers.write(file, ") || ")
-    end
-    Im.Gen.Helpers.write(file, "Network({})", "\n")
-    Im.Gen.Helpers.writeLn(file, "));", 0)
-  end
-
-  defp initialState(state, pids) do
-    case state do
-      {:pid, p} -> pids[p]
-      p -> p
-    end
+    """
+    init
+      allow({outgoingMessage, incomingMessage, lose},
+      comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
+        #{pr} || Network({})
+      )
+    );
+    """
   end
 
   def stringifyAST(ast) do
