@@ -3,10 +3,11 @@ defmodule Gen.GenEx do
   alias Processes.SubProcess
 
   def main() do
-    folder = "./generated/asd"
+    name = "twoPhasedCommit"
+    folder = "./generated/#{name}"
     :ok = File.mkdir_p(folder)
 
-    conf = Conf.getConf()["asd"]
+    conf = Conf.getConf()[name]
     run(folder, conf)
   end
 

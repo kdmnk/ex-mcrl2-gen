@@ -2,7 +2,7 @@ defmodule Processes.Process do
   alias Gen.GenMcrl2
   alias Gen.GenEx
 
-  defstruct [:identifier, :state, :run, :test]
+  defstruct [:identifier, :state, :run, :quantity]
 
   def writeMcrl2(%__MODULE__{} = p, state) do
     Gen.Helpers.writeLn(state, "#{p.identifier}(#{Gen.Helpers.getState(state.module_state)}) = ")

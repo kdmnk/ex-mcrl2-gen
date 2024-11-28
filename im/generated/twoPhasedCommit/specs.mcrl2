@@ -6,11 +6,11 @@ map LOSSY_NETWORK : Bool;
 eqn LOSSY_NETWORK = true;
 
 map User1_PID : Pid;
-eqn User1_PID = 61;
+eqn User1_PID = 29;
 map User2_PID : Pid;
-eqn User2_PID = 62;
+eqn User2_PID = 38;
 map Mach_PID : Pid;
-eqn Mach_PID = 97;
+eqn Mach_PID = 33;
 
 
 act

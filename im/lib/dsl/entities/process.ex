@@ -2,15 +2,19 @@ defmodule Dsl.Entities.Process do
   def process, do: %Spark.Dsl.Entity{
     name: :process,
     describe: "A process that defines commands.",
-    args: [:identifier, :state],
+    args: [:identifier, :state, :quantity],
     target: Processes.Process,
     schema: [
       identifier: [
         type: :atom
       ],
       state: [
-        type: {:map, :atom, {:tuple, [:atom, :atom]}},
+        type: {:map, :atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}},
         doc: "State of the process, defined as a map."
+      ],
+      quantity: [
+        type: :integer,
+        doc: "Number of processes to run."
       ]
     ],
     entities: [run: [

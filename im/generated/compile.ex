@@ -1,7 +1,12 @@
-Code.compile_file("generated/asd/Mach.ex")
-Code.compile_file("generated/asd/MachApi.ex")
-Code.compile_file("generated/asd/Main.ex")
-Code.compile_file("generated/asd/User1Api.ex")
-Code.compile_file("generated/asd/User1.ex")
-Code.compile_file("generated/asd/User2Api.ex")
-Code.compile_file("generated/asd/User2.ex")
+Path.wildcard("./generated/**/*.{ex,exs}")
+|> Enum.filter(fn x -> x != "generated/compile.ex" end)
+|> Enum.sort_by(&String.length/1, :desc) #xxxApi.ex first
+|> Enum.each(fn file ->
+  IO.puts("Compiling: #{file}")
+  case Code.compile_file(file) do
+    {:error, reason} ->
+      IO.puts("Error compiling #{file}: #{reason}")
+    _ ->
+      IO.puts("Successfully compiled: #{file}")
+  end
+end)
