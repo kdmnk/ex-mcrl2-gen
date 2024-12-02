@@ -3,7 +3,7 @@ defmodule Gen.GenEx do
   alias Processes.SubProcess
 
   def main() do
-    name = "twoPhasedCommit"
+    name = "twoPhasedCommitMultiple"
     folder = "./generated/#{name}"
     :ok = File.mkdir_p(folder)
 
@@ -69,6 +69,9 @@ defmodule Gen.GenEx do
       {var, _pos, nil} -> stringifyAST(var, getVarVals)
       var when is_atom(var) -> if(getVarVals, do: "var(state, :#{var})", else: var)
       int when is_integer(int) -> int
+      {:length, _pos, arg} -> "length(#{stringifyAST(arg)})"
+      [a | b] when b != [] -> "(#{stringifyAST(a)}, #{stringifyAST(b)})"
+      [a] -> "(#{stringifyAST(a)})"
       [] -> "[]"
     end
   end

@@ -33,6 +33,7 @@ defmodule Dsl.Entities.Process do
     id = String.replace_prefix(to_string(entity.identifier), "Elixir.", "")
     state = Enum.map(entity.state, fn
       {name, {:pid, pidName}} -> {name, {:pid, String.replace_prefix(to_string(pidName), "Elixir.", "")}}
+      {name, {:list, {:pid, pidName}}} -> {name, {:list, {:pid, String.replace_prefix(to_string(pidName), "Elixir.", "")}}}
       v -> v
     end)
     {:ok, %{entity | identifier: id, state: state}}

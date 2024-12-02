@@ -40,7 +40,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
 
   process Mach, %{users => {:list, {:pid, User}}}, 1 do
     send! users, commitRequest
-    call! "receiveMessages", [[], length(list)]
+    call! "receiveMessages", [[], length(users)]
   end
 
   subprocess Mach, "receiveMessages", %{:msgs => {:list, :Nat}, :remaining => :Int} do
@@ -62,25 +62,6 @@ defmodule Protocols.TwoPhasedCommitMultiple do
     end
   end
 
-  subprocess Mach, "receiveAcks", %{:msgs => {:list, :Nat}, :remaining => :Int} do
-    if! remaining == 0 do
-      then! do
-        recurse! do: nil
-      end
-      else! do
-        call! "receiveAck", [:msgs, :remaining]
-      end
-    end
-  end
-
-  subprocess Mach, "receiveAck", %{:msgs => {:list, :Nat}, :remaining => :Int} do
-    rcv! {m, some_user} do
-      when! m == 4 do
-        call! "receiveAcks", [[m | :msgs], :remaining-1]
-      end
-    end
-  end
-
   subprocess Mach, "processAck", %{:msgs => {:list, :Nat}} do
     if! 2 in msgs do
       then! do
@@ -90,7 +71,24 @@ defmodule Protocols.TwoPhasedCommitMultiple do
         send! users, commitMessage
       end
     end
-    call! "receiveAcks", [[m | :msgs], :remaining-1]
+    call! "waitForAcks", [length(users)]
+  end
+
+  subprocess Mach, "waitForAcks", %{:remaining => :Int} do
+    if! remaining > 0 do
+      then! do
+        state! :tau
+        rcv! {m, some_user} do
+          when! m == 4 do
+            state! :tau
+          end
+        end
+        call! "waitForAcks", [:remaining-1]
+      end
+      else! do
+        recurse! do: nil
+      end
+    end
   end
 
 

@@ -3,7 +3,7 @@ defmodule Gen.GenMcrl2 do
   alias Processes.SubProcess
 
   def main() do
-    name = "twoPhasedCommit"
+    name = "twoPhasedCommitMultiple"
     folder = "./generated/#{name}"
     :ok = File.mkdir_p(folder)
 
@@ -48,7 +48,15 @@ defmodule Gen.GenMcrl2 do
     )
 
   defp getDeclarationsString(messageType, lossyNetwork, processes) do
-    randomPids = Enum.map(processes, fn p -> "map #{p.identifier}_PID : Pid;\neqn #{p.identifier}_PID = #{:rand.uniform(100)};\n" end)
+    randomPids = Enum.map(processes, fn p ->
+      case p.quantity do
+        x when x > 1 ->
+          pids = Enum.join(Enum.map(1..x, fn _ -> :rand.uniform(100) end), ", ")
+          "map #{p.identifier}_PID : List(Pid);\neqn #{p.identifier}_PID = [#{pids}];\n"
+        _ -> "map #{p.identifier}_PID : Pid;\neqn #{p.identifier}_PID = #{:rand.uniform(100)};"
+      end
+    end)
+    |> Enum.join("")
 
     """
     sort Pid = Nat;
@@ -58,7 +66,7 @@ defmodule Gen.GenMcrl2 do
     map LOSSY_NETWORK : Bool;
     eqn LOSSY_NETWORK = #{lossyNetwork};
 
-    #{Enum.join(randomPids, "")}
+    #{randomPids}
 
     act
       sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
@@ -83,10 +91,27 @@ defmodule Gen.GenMcrl2 do
   defp getInitString(processes) do
     pr = processes
       |> Enum.map(fn p ->
-        "#{p.identifier}(" <>
-        (["#{p.identifier}_PID" | Enum.map(Keyword.values(p.state), fn {:pid, v} -> "#{v}_PID" end)]
-        |> Enum.join(", "))
-        <> ")"
+        case p.quantity do
+          x when x > 1 ->
+            Enum.map(1..x, fn q ->
+              "#{p.identifier}(" <>
+              (["#{p.identifier}_PID . #{q}" | Enum.map(Keyword.values(p.state), fn
+                {:pid, v} -> "#{v}_PID"
+                {:list, {:pid, v}} -> "#{v}_PID"
+               end)]
+              |> Enum.join(", "))
+              <> ")"
+            end)
+            |> Enum.join(" || ")
+          _ -> "#{p.identifier}(" <>
+              (["#{p.identifier}_PID" | Enum.map(Keyword.values(p.state), fn
+                {:pid, v} -> "#{v}_PID"
+                {:list, {:pid, v}} -> "#{v}_PID"
+               end)]
+              |> Enum.join(", "))
+              <> ")"
+        end
+
       end)
       |> Enum.join(" || ")
 
@@ -103,11 +128,13 @@ defmodule Gen.GenMcrl2 do
   def stringifyAST(ast) do
     case ast do
       {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
-      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left)} #{op} #{stringifyAST(right)})"
-      [{:|, _pos, [left, right]}] -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
+      {:|, _pos, [left, right]} -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
       {:or, _pos, [left, right]} -> "#{stringifyAST(left)} || #{stringifyAST(right)}"
       {:and, _pos, [left, right]} -> "#{stringifyAST(left)} && #{stringifyAST(right)}"
-      {:!, _pos, right} -> "!#{stringifyAST(right)}"
+      {:!, _pos, arg} -> "!#{stringifyAST(arg)}"
+      {:length, _pos, arg} -> "# #{stringifyAST(arg)}"
+      [a | b] when b != [] -> "(#{stringifyAST(a)}, #{stringifyAST(b)})"
+      [a] -> "(#{stringifyAST(a)})"
       {var, _pos, nil} -> var
       var when is_atom(var) -> var
       int when is_integer(int) -> int

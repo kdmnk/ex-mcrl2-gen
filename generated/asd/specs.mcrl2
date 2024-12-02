@@ -1,6 +1,0 @@
-sort MessageType = Nat;
-sort Pid = Nat;
-act
- sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
-proc
- Elixir.User(pid: Pid) = 

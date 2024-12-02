@@ -24,3 +24,6 @@ im-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+*.lts
+*.lps

@@ -60,7 +60,7 @@ defmodule Gen.Helpers do
   defp typeToMcrl2(type) do
     case type do
       {:pid, _} -> "Pid"
-      {:list, type} -> "List(#{type})"
+      {:list, type} -> "List(#{typeToMcrl2(type)})"
       p -> p
     end
   end
