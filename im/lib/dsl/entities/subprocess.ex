@@ -24,6 +24,7 @@ defmodule Dsl.Entities.SubProcess do
       Dsl.Entities.IfCmd.cmd,
       Dsl.Entities.ReceiveCmd.cmd,
       Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.ChoiceCmd.cmd,
       Dsl.Entities.CallCmd.cmd,
       Dsl.Entities.CallRecurseCmd.cmd,

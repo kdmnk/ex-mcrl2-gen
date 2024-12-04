@@ -18,7 +18,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
   rollback = 5
 
   messageType :Nat
-  lossyNetwork true
+  lossyNetwork false
 
   process User, %{}, 3 do
     rcv! {m, server} do
@@ -39,7 +39,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
   end
 
   process Mach, %{users => {:list, {:pid, User}}}, 1 do
-    send! users, commitRequest
+    broadcast! users, commitRequest
     call! "receiveMessages", [[], length(users)]
   end
 
@@ -65,10 +65,10 @@ defmodule Protocols.TwoPhasedCommitMultiple do
   subprocess Mach, "processAck", %{:msgs => {:list, :Nat}} do
     if! 2 in msgs do
       then! do
-        send! users, rollback
+        broadcast! users, rollback
       end
       else! do
-        send! users, commitMessage
+        broadcast! users, commitMessage
       end
     end
     call! "waitForAcks", [length(users)]
@@ -78,15 +78,19 @@ defmodule Protocols.TwoPhasedCommitMultiple do
     if! remaining > 0 do
       then! do
         state! :tau
-        rcv! {m, some_user} do
-          when! m == 4 do
-            state! :tau
-          end
-        end
+        call! "rcvAck", []
         call! "waitForAcks", [:remaining-1]
       end
       else! do
         recurse! do: nil
+      end
+    end
+  end
+
+  subprocess Mach, "rcvAck", %{} do
+    rcv! {m, some_user} do
+      when! m == 4 do
+        state! :tau
       end
     end
   end

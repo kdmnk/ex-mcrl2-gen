@@ -9,6 +9,7 @@ defmodule Dsl.Entities.IfThenCmd do
     ],
     entities: [body: [
       Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.ChoiceCmd.cmd,
       Dsl.Entities.CallCmd.cmd,
       Dsl.Entities.CallRecurseCmd.cmd,

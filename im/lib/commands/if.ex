@@ -13,12 +13,12 @@ defmodule Commands.If do
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.If{} = cmd) do
-    Gen.Helpers.writeLn(state, "(#{Gen.GenMcrl2.stringifyAST(cmd.condition)}) -> (")
+    Gen.Helpers.writeLn(state, "((#{Gen.GenMcrl2.stringifyAST(cmd.condition)}) -> (")
     Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.then)
     Gen.Helpers.writeLn(state, ")")
     Gen.Helpers.writeLn(state, "<> (")
     Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.else)
-    Gen.Helpers.writeLn(state, ")")
+    Gen.Helpers.writeLn(state, "))")
   end
 
 end

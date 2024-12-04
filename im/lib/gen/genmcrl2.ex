@@ -68,8 +68,26 @@ defmodule Gen.GenMcrl2 do
 
     #{randomPids}
 
+    map SplitBroadcastedMessages: Pid # List(Pid) # MessageType -> FSet(Message);
+    var v_sender: Pid;
+	      v_receivers: List(Pid);
+        v_message: MessageType;
+    eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
+        SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
+    map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageType # FSet(Message) -> FSet(Message);
+    var v_sender: Pid;
+        v_receivers: List(Pid);
+        v_message: MessageType;
+        v_msgs: FSet(Message);
+    eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
+        ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
+                         SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
+                         + {Message(v_sender, head(v_receivers), v_message)} );
+
+
     act
-      sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Nat # Nat # MessageType;
+      sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageType;
+      broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageType;
       lose;
     proc
     """
@@ -77,15 +95,21 @@ defmodule Gen.GenMcrl2 do
 
   defp getNetworkString(), do: """
     Network(msgs: FSet(Message)) =
-      (sum sender : Pid,  receiver : Pid, msg: MessageType .
-        networkReceiveMessage(sender, receiver, msg) .
-        Network(msgs = msgs + {Message(sender, receiver, msg)})
-      )
-      +
-      (sum msg: Message . (msg in msgs) ->
-        (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
-          + ((LOSSY_NETWORK) -> lose)
-        ) . Network(msgs = msgs - {msg}));
+      (sum sender : Pid, msg: MessageType . (
+        (sum receiver : Pid .
+          networkReceiveMessage(sender, receiver, msg) .
+          Network(msgs = msgs + {Message(sender, receiver, msg)})
+        )
+        +
+        (sum receivers: List(Pid) .
+          networkBroadcastMessages(sender, receivers, msg) .
+          Network(msgs = msgs + SplitBroadcastedMessages(sender, receivers, msg)))
+       ))
+       +
+       (sum msg: Message . (msg in msgs) ->
+         (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
+           + ((LOSSY_NETWORK) -> lose)
+         ) . Network(msgs = msgs - {msg}));
     """
 
   defp getInitString(processes) do
@@ -93,7 +117,7 @@ defmodule Gen.GenMcrl2 do
       |> Enum.map(fn p ->
         case p.quantity do
           x when x > 1 ->
-            Enum.map(1..x, fn q ->
+            Enum.map(0..(x-1), fn q ->
               "#{p.identifier}(" <>
               (["#{p.identifier}_PID . #{q}" | Enum.map(Keyword.values(p.state), fn
                 {:pid, v} -> "#{v}_PID"
@@ -117,8 +141,12 @@ defmodule Gen.GenMcrl2 do
 
     """
     init
-      allow({outgoingMessage, incomingMessage, lose},
-      comm({sendMessage|networkReceiveMessage -> outgoingMessage, networkSendMessage|receiveMessage -> incomingMessage},
+      allow({outgoingMessage, incomingMessage, broadcast, lose},
+      comm({
+        sendMessage|networkReceiveMessage -> outgoingMessage,
+        networkSendMessage|receiveMessage -> incomingMessage,
+        broadcastMessages|networkBroadcastMessages -> broadcast
+      },
         #{pr} || Network({})
       )
     );

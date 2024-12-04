@@ -1,0 +1,13 @@
+%[ true* ] < true* . done > true
+
+% infinite 
+nu Z. (<true> Z || <done> true)
+
+%-- finite 
+%mu Z. (<true> Z || <outgoingMessage(User1_PID,Mach_PID,4)> true)
+
+
+%-- if something is sent, it will be received eventually
+%-- trivial properties about network / general protocols
+
+

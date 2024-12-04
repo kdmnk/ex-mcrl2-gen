@@ -12,6 +12,7 @@ defmodule Dsl.Entities.ReceiveCaseCmd do
     ],
     entities: [body: [
       Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.ChoiceCmd.cmd,
       Dsl.Entities.StateCmd.cmd,
       Dsl.Entities.CallCmd.cmd,
