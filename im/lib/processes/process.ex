@@ -20,10 +20,8 @@ defmodule Processes.Process do
         module_name: p.identifier <> "Api",
       }
 
-      Gen.Helpers.writeLn(s, "use GenServer\n")
-      GenEx.writeBlock(s, "defmodule InitState do", fn s ->
-        Gen.Helpers.writeLn(s, "defstruct [:pid]")
-      end)
+      Gen.Helpers.writeLn(s, "use GenServer")
+      Gen.Helpers.writeLn(s, "require Logger\n")
 
       GenEx.writeBlock(s, "defmodule IdleState do", fn s ->
         Gen.Helpers.writeLn(s, "defstruct []")
@@ -35,28 +33,23 @@ defmodule Processes.Process do
         end)
       end)
 
-      GenEx.writeBlock(s, "def init(#{stateStr(p)}) do", fn s ->
-        GenEx.writeBlock(s, "if Process.whereis(#{p.identifier}) do", fn s ->
-          Gen.Helpers.writeLn(s, "GenServer.stop(#{p.identifier})")
-        end)
-        Gen.Helpers.writeLn(s, "{:ok, pid} = GenServer.start_link(#{p.identifier}, %{#{stateMap(p)}}, name: #{p.identifier})")
-        Gen.Helpers.writeLn(s, "GenServer.start_link(__MODULE__, [], name: __MODULE__)")
-        Gen.Helpers.writeLn(s, "%InitState{pid: pid}")
+      GenEx.writeBlock(s, "def start_link(_) do", fn s ->
+        Gen.Helpers.writeLn(s, "GenServer.start_link(__MODULE__, %{}, name: __MODULE__)")
       end)
 
-      GenEx.writeBlock(s, "def start(%InitState{}) do", fn s ->
-        Gen.Helpers.writeLn(s, "GenServer.cast(#{p.identifier}, :start)")
+      GenEx.writeBlock(s, "def start() do", fn s ->
+        Gen.Helpers.writeLn(s, "GenServer.cast({#{p.identifier}, Node.self()}, :start)")
         Gen.Helpers.writeLn(s, "%IdleState{}")
       end)
 
       if choices != [] do
         GenEx.writeBlock(s, "def wait(%IdleState{}) do", fn s ->
-          Gen.Helpers.writeLn(s, "GenServer.call(__MODULE__, :wait)")
+          Gen.Helpers.writeLn(s, "GenServer.call({__MODULE__, Node.self()}, :wait, :infinity)")
         end)
 
         Enum.map(choices, fn cmd ->
           GenEx.writeBlock(s, "def choose#{Commands.Choice.getStateLabel(cmd)}(%Choice#{Commands.Choice.getStateLabel(cmd)}State{}, choice) do", fn s ->
-            Gen.Helpers.writeLn(s, "GenServer.cast(#{p.identifier}, {:#{cmd.label}, choice})")
+            Gen.Helpers.writeLn(s, "GenServer.cast({#{p.identifier}, Node.self()}, {:#{cmd.label}, choice})")
             Gen.Helpers.writeLn(s, "%IdleState{}")
           end)
         end)
@@ -77,7 +70,6 @@ defmodule Processes.Process do
           Gen.Helpers.writeLn(s, "{:noreply, {nil, from}}")
         end)
 
-
         GenEx.writeBlock(s, "def handle_cast({:new_choice, choiceState},{nil, nil}) do", fn s ->
           GenEx.writeLog(s, "got new state but client is not waiting yet")
           Gen.Helpers.writeLn(s, "{:noreply, {choiceState, nil}}")
@@ -97,9 +89,16 @@ defmodule Processes.Process do
         module_name: p.identifier,
         module_state: stateList(p)}
 
-      Gen.Helpers.writeLn(s, "use GenServer\n")
+      Gen.Helpers.writeLn(s, "use GenServer")
+      Gen.Helpers.writeLn(s, "require Logger\n")
+
+      GenEx.writeBlock(s, "def start_link(vars) do", fn s ->
+        Gen.Helpers.writeLn(s, "GenServer.start_link(__MODULE__, vars, name: __MODULE__)")
+      end)
 
       GenEx.writeBlock(s, "def init(vars) do", fn s ->
+        Gen.Helpers.writeLn(s, "vars = %{#{stateInit(p)}}")
+        GenEx.writeLog(s, "initialised with \#{inspect(vars)}")
         Gen.Helpers.writeLn(s, "{:ok, vars}")
       end)
 
@@ -162,6 +161,10 @@ defmodule Processes.Process do
 
   def stateMap(%__MODULE__{} = p) do
     Keyword.keys(p.state) |> Enum.map(fn s -> ":#{s} => #{s}" end) |> Enum.join(", ")
+  end
+
+  def stateInit(%__MODULE__{} = p) do
+    Keyword.keys(p.state) |> Enum.map(fn s -> ":#{s} => var(vars, :#{s})" end) |> Enum.join(", ")
   end
 
   def statePidNamesStr(%__MODULE__{} = p) do

@@ -4,7 +4,7 @@ defmodule Gen.GenEx do
 
   def main() do
     name = "twoPhasedCommitMultiple"
-    folder = "./generated/#{name}"
+    folder = "./generated/#{name}/lib"
     :ok = File.mkdir_p(folder)
 
     conf = Conf.getConf()[name]
