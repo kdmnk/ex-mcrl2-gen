@@ -1,9 +1,9 @@
-defmodule SimpleCluster.MachApi do
-  alias SimpleCluster
+defmodule MachApi do
   use GenServer
+  require Logger
 
   defmodule InitState do
-    defstruct []
+    defstruct [:pid]
   end
 
   defmodule IdleState do
@@ -18,8 +18,8 @@ defmodule SimpleCluster.MachApi do
     %InitState{}
   end
 
-  def start() do
-    GenServer.cast({SimpleCluster.Mach, :"mach@127.0.0.1"}, :start)
+  def start(%InitState{}) do
+    GenServer.cast({Mach, Node.self()}, :start)
     %IdleState{}
   end
 
@@ -28,3 +28,4 @@ defmodule SimpleCluster.MachApi do
   end
 
 end
+

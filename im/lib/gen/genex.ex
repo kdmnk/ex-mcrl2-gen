@@ -49,7 +49,7 @@ defmodule Gen.GenEx do
   end
 
   def writeLog(%Gen.GenState{} = state, str, indentation \\ 0) do
-    Gen.Helpers.writeLn(state, "IO.puts(\"#{state.module_name}: #{str}\")", indentation)
+    Gen.Helpers.writeLn(state, "Logger.info(\"#{state.module_name}: #{str}\")", indentation)
   end
 
   def writeBlock(%Gen.GenState{} = state, str, child) do
@@ -69,9 +69,9 @@ defmodule Gen.GenEx do
       {var, _pos, nil} -> stringifyAST(var, getVarVals)
       var when is_atom(var) -> if(getVarVals, do: "var(state, :#{var})", else: var)
       int when is_integer(int) -> int
-      {:length, _pos, arg} -> "length(#{stringifyAST(arg)})"
-      [a | b] when b != [] -> "(#{stringifyAST(a)}, #{stringifyAST(b)})"
-      [a] -> "(#{stringifyAST(a)})"
+      {:length, _pos, arg} -> "length(#{stringifyAST(arg, getVarVals)})"
+      [a | b] when b != [] -> "(#{stringifyAST(a, getVarVals)}, #{stringifyAST(b, getVarVals)})"
+      [a] -> "(#{stringifyAST(a, getVarVals)})"
       [] -> "[]"
     end
   end

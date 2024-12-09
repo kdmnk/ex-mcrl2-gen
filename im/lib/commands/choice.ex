@@ -1,9 +1,8 @@
 defmodule Commands.Choice do
   defstruct [:label, :body]
 
-
   def writeEx(%Gen.GenState{} = state, %Commands.Choice{} = cmd) do
-    Gen.Helpers.writeLn(state, "GenServer.cast(#{state.module_name}Api, {:new_choice, %#{state.module_name}Api.Choice#{getStateLabel(cmd)}State{choice: :#{cmd.label}, vars: state}})")
+    Gen.Helpers.writeLn(state, "GenServer.cast({#{state.module_name}Api, Node.self()}, {:new_choice, %#{state.module_name}Api.Choice#{getStateLabel(cmd)}State{choice: :#{cmd.label}, vars: state}})")
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.Choice{} = cmd) do

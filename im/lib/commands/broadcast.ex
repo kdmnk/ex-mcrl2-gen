@@ -3,9 +3,9 @@ defmodule Commands.Broadcast do
 
 
   def writeEx(%Gen.GenState{} = state, %Commands.Broadcast{} = cmd) do
-    Gen.GenEx.writeLog(state, "TODO broadcast")
-    # Gen.GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(var(state, :#{cmd.to}))}")
-    # Gen.Helpers.writeLn(state, "GenServer.cast(var(state, :#{cmd.to}), {self(), #{cmd.message}})")
+    Gen.GenEx.writeLog(state, "broadcasting \#{inspect(#{cmd.message})} to #{cmd.to}")
+    Gen.Helpers.writeLn(state, "var(state, :#{cmd.to})")
+    Gen.Helpers.writeLn(state, "|> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, #{cmd.message}}) end)")
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.Broadcast{} = cmd) do

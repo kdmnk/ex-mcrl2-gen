@@ -1,13 +1,14 @@
-defmodule SimpleCluster.User do
+defmodule User do
   use GenServer
-  alias SimpleCluster
   require Logger
 
-  def start_link(_) do
-    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
+  def start_link(vars) do
+    GenServer.start_link(__MODULE__, vars, name: __MODULE__)
   end
 
   def init(vars) do
+    vars = %{}
+    Logger.info("User: initialised with #{inspect(vars)}")
     {:ok, vars}
   end
 
@@ -17,37 +18,37 @@ defmodule SimpleCluster.User do
   end
 
   def handle_cast({:chooseAnswer, true}, state) do
-    Logger.info("User1: sending #{inspect(1)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {self(), 1})
+    Logger.info("User: sending #{inspect(1)} to #{inspect(var(state, :server))}")
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 1})
     {:noreply, state}
   end
 
   def handle_cast({:chooseAnswer, false}, state) do
-    Logger.info("User1: sending #{inspect(2)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {self(), 2})
+    Logger.info("User: sending #{inspect(2)} to #{inspect(var(state, :server))}")
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 2})
     {:noreply, state}
   end
 
   def handle_cast({server, m}, state) when m == 0 do
-    Logger.info("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
+    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
     state = updateState(state, %{:m => m, :server => server})
-    GenServer.cast({SimpleCluster.UserApi, Node.self()}, {:new_choice, %SimpleCluster.UserApi.ChoiceChooseAnswerState{choice: :chooseAnswer, vars: state}})
+    GenServer.cast({UserApi, Node.self()}, {:new_choice, %UserApi.ChoiceChooseAnswerState{choice: :chooseAnswer, vars: state}})
     {:noreply, state}
   end
 
   def handle_cast({server, m}, state) when m == 3 do
-    Logger.info("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 3' holds")
+    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 3' holds")
     state = updateState(state, %{:m => m, :server => server})
-    Logger.info("User1: sending #{inspect(4)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {self(), 4})
+    Logger.info("User: sending #{inspect(4)} to #{inspect(var(state, :server))}")
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 4})
     {:noreply, state}
   end
 
   def handle_cast({server, m}, state) when m == 5 do
-    Logger.info("User1: received #{inspect(m)} from #{inspect(server)} and 'm == 5' holds")
+    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 5' holds")
     state = updateState(state, %{:m => m, :server => server})
-    Logger.info("User1: sending #{inspect(4)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {self(), 4})
+    Logger.info("User: sending #{inspect(4)} to #{inspect(var(state, :server))}")
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 4})
     {:noreply, state}
   end
 
@@ -60,3 +61,4 @@ defmodule SimpleCluster.User do
   end
 
 end
+

@@ -1,25 +1,22 @@
-defmodule SimpleCluster.Mach do
-  alias Hex.API.User
-  alias SimpleCluster
+defmodule Mach do
   use GenServer
   require Logger
 
   def start_link(vars) do
-    Logger.info("Mach started with #{inspect(vars)}")
     GenServer.start_link(__MODULE__, vars, name: __MODULE__)
   end
 
   def init(vars) do
-    Logger.info("Mach initialised with #{inspect(vars)}")
+    vars = %{:users => var(vars, :users)}
+    Logger.info("Mach: initialised with #{inspect(vars)}")
     {:ok, vars}
   end
 
   def handle_cast(:start, state) do
-    Logger.info("Mach: sending #{inspect(0)} to #{inspect(var(state, :user1))}")
-    GenServer.cast(var(state, :user1), {Node.self(), 0})
-    Logger.info("Mach: sending #{inspect(0)} to #{inspect(var(state, :user2))}")
-    GenServer.cast(var(state, :user2), {Node.self(), 0})
-    state = updateState(state, %{:msgs => [], :remaining => 2})
+    Logger.info("Mach: broadcasting #{inspect(0)} to users")
+    var(state, :users)
+    |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 0}) end)
+    state = updateState(state, %{:msgs => [], :remaining => length((var(state, :users)))})
     state = receiveMessages(state)
     {:noreply, state}
   end
@@ -29,12 +26,6 @@ defmodule SimpleCluster.Mach do
     state = updateState(state, %{:m => m, :some_user => some_user})
     state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)], :remaining => var(state, :remaining) - 1})
     state = receiveMessages(state)
-    {:noreply, state}
-  end
-
-  def handle_cast({some_user, m}, state) when m == 4 do
-    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 4' holds")
-    state = updateState(state, %{:m => m, :some_user => some_user})
     {:noreply, state}
   end
 
@@ -65,19 +56,37 @@ defmodule SimpleCluster.Mach do
 
   def processAck(state) do
     state = if (2 in var(state, :msgs)) do
-      Logger.info("Mach: sending #{inspect(5)} to #{inspect(var(state, :user1))}")
-      GenServer.cast(var(state, :user1), {self(), 5})
-      Logger.info("Mach: sending #{inspect(5)} to #{inspect(var(state, :user2))}")
-      GenServer.cast(var(state, :user2), {self(), 5})
+      Logger.info("Mach: broadcasting #{inspect(5)} to users")
+      var(state, :users)
+      |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 5}) end)
       state
     else
-      Logger.info("Mach: sending #{inspect(3)} to #{inspect(var(state, :user1))}")
-      GenServer.cast(var(state, :user1), {self(), 3})
-      Logger.info("Mach: sending #{inspect(3)} to #{inspect(var(state, :user2))}")
-      GenServer.cast(var(state, :user2), {self(), 3})
+      Logger.info("Mach: broadcasting #{inspect(3)} to users")
+      var(state, :users)
+      |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 3}) end)
       state
     end
 
+    state = updateState(state, %{:remaining => length((var(state, :users)))})
+    state = waitForAcks(state)
+    state
+  end
+
+  def waitForAcks(state) do
+    state = if (var(state, :remaining) > 0) do
+      state = updateState(state, %{})
+      state = rcvAck(state)
+      state = updateState(state, %{:remaining => var(state, :remaining) - 1})
+      state = waitForAcks(state)
+      state
+    else
+      state
+    end
+
+    state
+  end
+
+  def rcvAck(state) do
     # Continues from a receive block...
     state
   end
@@ -91,3 +100,4 @@ defmodule SimpleCluster.Mach do
   end
 
 end
+

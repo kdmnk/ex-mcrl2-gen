@@ -1,6 +1,5 @@
-defmodule SimpleCluster.UserApi do
+defmodule UserApi do
   use GenServer
-  alias SimpleCluster
   require Logger
 
   defmodule InitState do
@@ -20,20 +19,20 @@ defmodule SimpleCluster.UserApi do
   end
 
   def init() do
-    %InitState{pid: self()}
+    %InitState{}
   end
 
-  def start() do
-    GenServer.cast({User1, Node.self()}, :start)
+  def start(%InitState{}) do
+    GenServer.cast({User, Node.self()}, :start)
     %IdleState{}
   end
 
-  def wait() do
-    GenServer.call({__MODULE__, Node.self()}, :wait, :infinity)
+  def wait(%IdleState{}) do
+    GenServer.call({__MODULE__, Node.self()}, :wait)
   end
 
   def chooseChooseAnswer(%ChoiceChooseAnswerState{}, choice) do
-    GenServer.cast({User1, Node.self()}, {:chooseAnswer, choice})
+    GenServer.cast({User, Node.self()}, {:chooseAnswer, choice})
     %IdleState{}
   end
 
@@ -42,22 +41,22 @@ defmodule SimpleCluster.UserApi do
   end
 
   def handle_call(:wait, _from, {choiceState, nil}) when not is_nil(choiceState) do
-    Logger.info("User1Api: Started waiting. Replying with already updated state.")
+    Logger.info("UserApi: Started waiting. Replying with already updated state.")
     {:reply, choiceState, {nil, nil}}
   end
 
   def handle_call(:wait, from, {nil, nil}) do
-    Logger.info("User1Api: Started waiting.")
+    Logger.info("UserApi: Started waiting.")
     {:noreply, {nil, from}}
   end
 
   def handle_cast({:new_choice, choiceState},{nil, nil}) do
-    Logger.info("User1Api: got new state but client is not waiting yet")
+    Logger.info("UserApi: got new state but client is not waiting yet")
     {:noreply, {choiceState, nil}}
   end
 
   def handle_cast({:new_choice, choiceState},{nil, from}) do
-    Logger.info("User1Api: replying to wait")
+    Logger.info("UserApi: replying to wait")
     GenServer.reply(from, choiceState)
     {:noreply, {nil, nil}}
   end
