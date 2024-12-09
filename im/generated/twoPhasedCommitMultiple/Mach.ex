@@ -1,23 +1,46 @@
-defmodule Mach do
+defmodule SimpleCluster.Mach do
+  alias Hex.API.User
+  alias SimpleCluster
   use GenServer
+  require Logger
+
+  def start_link(vars) do
+    Logger.info("Mach started with #{inspect(vars)}")
+    GenServer.start_link(__MODULE__, vars, name: __MODULE__)
+  end
 
   def init(vars) do
+    Logger.info("Mach initialised with #{inspect(vars)}")
     {:ok, vars}
   end
 
   def handle_cast(:start, state) do
-    IO.puts("Mach: sending #{inspect(0)} to #{inspect(var(state, :users))}")
-    GenServer.cast(var(state, :users), {self(), 0})
-    state = updateState(state, %{:msgs => [], :remaining => length((users))})
+    Logger.info("Mach: sending #{inspect(0)} to #{inspect(var(state, :user1))}")
+    GenServer.cast(var(state, :user1), {Node.self(), 0})
+    Logger.info("Mach: sending #{inspect(0)} to #{inspect(var(state, :user2))}")
+    GenServer.cast(var(state, :user2), {Node.self(), 0})
+    state = updateState(state, %{:msgs => [], :remaining => 2})
     state = receiveMessages(state)
     {:noreply, state}
   end
 
   def handle_cast({some_user, m}, state) when m == 1 or m == 2 do
-    IO.puts("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 1 or m == 2' holds")
+    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 1 or m == 2' holds")
     state = updateState(state, %{:m => m, :some_user => some_user})
     state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)], :remaining => var(state, :remaining) - 1})
     state = receiveMessages(state)
+    {:noreply, state}
+  end
+
+  def handle_cast({some_user, m}, state) when m == 4 do
+    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 4' holds")
+    state = updateState(state, %{:m => m, :some_user => some_user})
+    {:noreply, state}
+  end
+
+  def handle_cast({some_user, m}, state) when m == 4 do
+    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 4' holds")
+    state = updateState(state, %{:m => m, :some_user => some_user})
     {:noreply, state}
   end
 
@@ -42,29 +65,20 @@ defmodule Mach do
 
   def processAck(state) do
     state = if (2 in var(state, :msgs)) do
-      IO.puts("Mach: sending #{inspect(5)} to #{inspect(var(state, :users))}")
-      GenServer.cast(var(state, :users), {self(), 5})
+      Logger.info("Mach: sending #{inspect(5)} to #{inspect(var(state, :user1))}")
+      GenServer.cast(var(state, :user1), {self(), 5})
+      Logger.info("Mach: sending #{inspect(5)} to #{inspect(var(state, :user2))}")
+      GenServer.cast(var(state, :user2), {self(), 5})
       state
     else
-      IO.puts("Mach: sending #{inspect(3)} to #{inspect(var(state, :users))}")
-      GenServer.cast(var(state, :users), {self(), 3})
+      Logger.info("Mach: sending #{inspect(3)} to #{inspect(var(state, :user1))}")
+      GenServer.cast(var(state, :user1), {self(), 3})
+      Logger.info("Mach: sending #{inspect(3)} to #{inspect(var(state, :user2))}")
+      GenServer.cast(var(state, :user2), {self(), 3})
       state
     end
 
-    state = updateState(state, %{:remaining => length((users))})
-    state = waitForAcks(state)
-    state
-  end
-
-  def waitForAcks(state) do
-    state = if (var(state, :remaining) > 0) do
-      state = updateState(state, %{:remaining => var(state, :remaining) - 1})
-      state = waitForAcks(state)
-      state
-    else
-      state
-    end
-
+    # Continues from a receive block...
     state
   end
 
@@ -77,4 +91,3 @@ defmodule Mach do
   end
 
 end
-

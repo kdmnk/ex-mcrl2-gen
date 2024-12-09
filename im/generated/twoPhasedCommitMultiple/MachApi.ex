@@ -1,26 +1,25 @@
-defmodule MachApi do
+defmodule SimpleCluster.MachApi do
+  alias SimpleCluster
   use GenServer
 
   defmodule InitState do
-    defstruct [:pid]
+    defstruct []
   end
 
   defmodule IdleState do
     defstruct []
   end
 
-  def init(users) do
-    if Process.whereis(Mach) do
-      GenServer.stop(Mach)
-    end
-
-    {:ok, pid} = GenServer.start_link(Mach, %{:users => users}, name: Mach)
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
-    %InitState{pid: pid}
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def start(%InitState{}) do
-    GenServer.cast(Mach, :start)
+  def init() do
+    %InitState{}
+  end
+
+  def start() do
+    GenServer.cast({SimpleCluster.Mach, :"mach@127.0.0.1"}, :start)
     %IdleState{}
   end
 
@@ -29,4 +28,3 @@ defmodule MachApi do
   end
 
 end
-

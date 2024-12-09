@@ -1,39 +1,39 @@
-defmodule UserApi do
+defmodule SimpleCluster.UserApi do
   use GenServer
+  alias SimpleCluster
+  require Logger
 
   defmodule InitState do
     defstruct [:pid]
   end
 
   defmodule IdleState do
-    defstruct [:pid]
+    defstruct []
   end
 
   defmodule ChoiceChooseAnswerState do
-    defstruct [:pid, :choice, :vars]
+    defstruct [:choice, :vars]
+  end
+
+  def start_link(_) do
+    GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
   def init() do
-    if Process.whereis(User) do
-      GenServer.stop(User)
-    end
-
-    {:ok, pid} = GenServer.start_link(User, %{})
-    GenServer.start_link(__MODULE__, [])
-    %InitState{pid: pid}
+    %InitState{pid: self()}
   end
 
-  def start(%InitState{pid: pid}) do
-    GenServer.cast(pid, :start)
-    %IdleState{pid: pid}
+  def start() do
+    GenServer.cast({User1, Node.self()}, :start)
+    %IdleState{}
   end
 
-  def wait(%IdleState{pid: pid}) do
-    GenServer.call(__MODULE__, {:wait, pid})
+  def wait() do
+    GenServer.call({__MODULE__, Node.self()}, :wait, :infinity)
   end
 
   def chooseChooseAnswer(%ChoiceChooseAnswerState{}, choice) do
-    GenServer.cast(User, {:chooseAnswer, choice})
+    GenServer.cast({User1, Node.self()}, {:chooseAnswer, choice})
     %IdleState{}
   end
 
@@ -42,22 +42,22 @@ defmodule UserApi do
   end
 
   def handle_call(:wait, _from, {choiceState, nil}) when not is_nil(choiceState) do
-    IO.puts("UserApi: Started waiting. Replying with already updated state.")
+    Logger.info("User1Api: Started waiting. Replying with already updated state.")
     {:reply, choiceState, {nil, nil}}
   end
 
   def handle_call(:wait, from, {nil, nil}) do
-    IO.puts("UserApi: Started waiting.")
+    Logger.info("User1Api: Started waiting.")
     {:noreply, {nil, from}}
   end
 
   def handle_cast({:new_choice, choiceState},{nil, nil}) do
-    IO.puts("UserApi: got new state but client is not waiting yet")
+    Logger.info("User1Api: got new state but client is not waiting yet")
     {:noreply, {choiceState, nil}}
   end
 
   def handle_cast({:new_choice, choiceState},{nil, from}) do
-    IO.puts("UserApi: replying to wait")
+    Logger.info("User1Api: replying to wait")
     GenServer.reply(from, choiceState)
     {:noreply, {nil, nil}}
   end

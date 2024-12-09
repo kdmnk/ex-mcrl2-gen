@@ -12,7 +12,7 @@ eqn Mach_PID = 34;
 
 map SplitBroadcastedMessages: Pid # List(Pid) # MessageType -> FSet(Message);
 var v_sender: Pid;
-   v_receivers: List(Pid);
+    v_receivers: List(Pid);
     v_message: MessageType;
 eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
     SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
