@@ -2,10 +2,6 @@ defmodule MachApi do
   use GenServer
   require Logger
 
-  defmodule InitState do
-    defstruct [:pid]
-  end
-
   defmodule IdleState do
     defstruct []
   end
@@ -14,11 +10,7 @@ defmodule MachApi do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def init() do
-    %InitState{}
-  end
-
-  def start(%InitState{}) do
+  def start() do
     GenServer.cast({Mach, Node.self()}, :start)
     %IdleState{}
   end

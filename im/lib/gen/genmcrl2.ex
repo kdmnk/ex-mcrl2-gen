@@ -4,10 +4,10 @@ defmodule Gen.GenMcrl2 do
 
   def main() do
     name = "twoPhasedCommitMultiple"
-    folder = "./generated/#{name}"
+    folder = "./generated/#{name}/mcrl2"
     :ok = File.mkdir_p(folder)
 
-    conf = Conf.getConf()[name]
+    conf = Conf.getConf(Protocols.TwoPhasedCommitMultiple)
     run(folder, conf)
   end
 

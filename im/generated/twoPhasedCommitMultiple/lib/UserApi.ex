@@ -2,10 +2,6 @@ defmodule UserApi do
   use GenServer
   require Logger
 
-  defmodule InitState do
-    defstruct [:pid]
-  end
-
   defmodule IdleState do
     defstruct []
   end
@@ -18,17 +14,13 @@ defmodule UserApi do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def init() do
-    %InitState{}
-  end
-
-  def start(%InitState{}) do
+  def start() do
     GenServer.cast({User, Node.self()}, :start)
     %IdleState{}
   end
 
   def wait(%IdleState{}) do
-    GenServer.call({__MODULE__, Node.self()}, :wait)
+    GenServer.call({__MODULE__, Node.self()}, :wait, :infinity)
   end
 
   def chooseChooseAnswer(%ChoiceChooseAnswerState{}, choice) do
@@ -62,3 +54,4 @@ defmodule UserApi do
   end
 
 end
+
