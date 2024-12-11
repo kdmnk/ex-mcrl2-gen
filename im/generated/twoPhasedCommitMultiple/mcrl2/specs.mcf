@@ -1,0 +1,29 @@
+%[ true* ] < true* . done > true
+
+% infinite 
+%nu Z. (<true> Z || <done> true) = <true*> <done> true
+
+%-- finite 
+%mu Z. (<true> Z || <outgoingMessage(User1_PID,Mach_PID,4)> true)
+
+
+%-- if something is sent, it will be received eventually
+%-- trivial properties about network / general protocols
+
+%% a message might get stuck in the network - holds - should not hold in a finite protocol ??
+%forall sender, receiver: Pid, msg: MessageType. 
+%(val((sender in User_PID || sender == Mach_PID) && (receiver in User_PID || receiver == Mach_PID) && msg < 6) =>
+%[true* . outgoingMessage(sender, receiver, msg) . (!incomingMessage(receiver, sender, msg))*] true
+
+% any outgoing has to be later followed by incoming - holds
+%[true* . outgoingMessage(sender, receiver, msg) . true* . incomingMessage(receiver, sender, msg)]true)
+
+
+%% Deadlock freedom, except after done <=> done is the only deadlock
+[(!done)*]<true>true
+
+
+
+%% if message is sent, it will be received eventually -- only for finite and final protocols -- ??
+%
+%[true* . outgoingMessage(sender, receiver, msg) . true* . incomingMessage(receiver, sender, msg)] true

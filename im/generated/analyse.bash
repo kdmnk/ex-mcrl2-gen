@@ -1,14 +1,17 @@
 export PATH=$PATH:~/Projects/mCRL2/stage/mCRL2.app/Contents/bin
-mcrl22lps generated/twoPhasedCommitMultiple/specs.mcrl2 generated/twoPhasedCommitMultiple/specs.lps -l regular2
+mcrl22lps "$1.mcrl2" "$1.lps" -l regular2
 echo "lps generated"
-lps2lts generated/twoPhasedCommitMultiple/specs.lps generated/twoPhasedCommitMultiple/specs.lts
+lps2lts "$1.lps" "$1.lts"
 echo "lts generated"
-lps2pbes -v -c -f generated/twoPhasedCommitMultiple/formulas.mcf generated/twoPhasedCommitMultiple/specs.lps generated/twoPhasedCommitMultiple/formulas.pbes
+lps2pbes -v -c -f "$1.mcf" "$1.lps" "$1.pbes"
 echo "pbes generated"
-pbes2bool generated/twoPhasedCommitMultiple/formulas.pbes
-# LpsXSim generated/twoPhasedCommitMultiple/specs.lps
-pbessolve -v --file=generated/twoPhasedCommitMultiple/specs.lts generated/twoPhasedCommitMultiple/formulas.pbes
-#ltsgraph generated/twoPhasedCommitMultiple/formulas.pbes.evidence.lts
-# ltsgraph generated/twoPhasedCommitMultiple/specs.lts
+pbes2bool -v "$1.pbes"
+#LpsXSim "$1.lps"
+pbessolve -v --file="$1.lts" "$1.pbes"
+ltsgraph "$1.pbes.evidence.lts"
+#ltsgraph "$1.lts"
 
-# ltsgraph generated/twoPhasedCommitMultiple/specs.lts
+
+#lps2lts -D -t "$1.lps"
+#echo "trace"
+#tracepp "$1.lps_act_0_exposeMsgs.trc"

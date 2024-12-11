@@ -1,6 +1,7 @@
 *.lts
 *.lps
 *.pbes
+*.trc
 
 # The directory Mix will write compiled artifacts to.
 **/_build/

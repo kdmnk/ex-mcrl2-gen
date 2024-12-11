@@ -5,9 +5,12 @@ defmodule Gen.GenEx do
   def main() do
     name = "twoPhasedCommitMultiple"
     folder = "./generated/#{name}/lib"
-    :ok = File.mkdir_p(folder)
+    if !File.exists?(folder) do
+      System.cmd("mix", ["new", name, "--sup"])
+      :ok = File.mkdir_p(folder)
+    end
 
-    conf = Conf.getConf()[name]
+    conf = Conf.getConf(Protocols.TwoPhasedCommitMultiple)
     run(folder, conf)
   end
 

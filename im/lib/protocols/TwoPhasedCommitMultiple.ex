@@ -82,6 +82,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
         call! "waitForAcks", [:remaining-1]
       end
       else! do
+        state! :done
         recurse! do: nil
       end
     end
