@@ -17,15 +17,14 @@ defmodule Dsl.Entities.Process do
         doc: "Number of processes to run."
       ]
     ],
-    entities: [run: [
-      Dsl.Entities.ReceiveCmd.cmd,
-      Dsl.Entities.SendCommand.cmd,
-      Dsl.Entities.BroadcastCmd.cmd,
-      Dsl.Entities.ChoiceCmd.cmd,
-      Dsl.Entities.CallCmd.cmd,
-      Dsl.Entities.CallRecurseCmd.cmd,
-      Dsl.Entities.IfCmd.cmd
-    ]],
+    entities: [
+      states: [
+        Dsl.Entities.State.cmd
+      ],
+      init: [
+        Dsl.Entities.Init.cmd
+      ]
+    ],
     transform: {__MODULE__, :transform_run, []}
   }
 

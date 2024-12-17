@@ -42,16 +42,14 @@ defmodule UserApi do
     {:noreply, {nil, from}}
   end
 
-  def handle_cast({:new_choice, choiceState},{nil, nil}) do
+  def handle_cast({:new_choice, choiceState}, {nil, nil}) do
     Logger.info("UserApi: got new state but client is not waiting yet")
     {:noreply, {choiceState, nil}}
   end
 
-  def handle_cast({:new_choice, choiceState},{nil, from}) do
+  def handle_cast({:new_choice, choiceState}, {nil, from}) do
     Logger.info("UserApi: replying to wait")
     GenServer.reply(from, choiceState)
     {:noreply, {nil, nil}}
   end
-
 end
-

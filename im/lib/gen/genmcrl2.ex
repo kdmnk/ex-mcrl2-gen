@@ -25,8 +25,8 @@ defmodule Gen.GenMcrl2 do
         %SubProcess{process: ^id} -> true
         _ -> false
       end)
-      module_state = Keyword.merge([pid: "Pid"], p.state)
-      state = %{state | module_name: p.identifier, module_state: module_state, indentation: state.indentation+1}
+      var_state = Keyword.merge([pid: "Pid"], p.state)
+      state = %{state | module_name: p.identifier, var_state: var_state, indentation: state.indentation+1}
       Process.writeMcrl2(p, state)
       subprocesses
       |> Enum.map(fn x -> SubProcess.writeMcrl2(x, state) end)

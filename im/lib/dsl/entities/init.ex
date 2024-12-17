@@ -1,9 +1,9 @@
-defmodule Dsl.Entities.IfElseCmd do
+defmodule Dsl.Entities.Init do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :else!,
-    describe: "",
-    target: Commands.IfElse,
+    name: :init,
+    describe: "Initial commands",
+    target: Commands.Init,
     args: [],
     schema: [
     ],
@@ -11,10 +11,10 @@ defmodule Dsl.Entities.IfElseCmd do
       Dsl.Entities.SendCommand.cmd,
       Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.ChoiceCmd.cmd,
-      Dsl.Entities.CallCmd.cmd,
       Dsl.Entities.CallRecurseCmd.cmd,
-      Dsl.Entities.StateCmd.cmd
-    ]]
+      Dsl.Entities.IfCmd.cmd,
+      Dsl.Entities.ChangeStateCmd.cmd,
+    ]],
   }
 
 end

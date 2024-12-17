@@ -3,8 +3,10 @@ defmodule Commands.Send do
 
 
   def writeEx(%Gen.GenState{} = state, %Commands.Send{} = cmd) do
-    Gen.GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(var(state, :#{cmd.to}))}")
-    Gen.Helpers.writeLn(state, "GenServer.cast(var(state, :#{cmd.to}), {{__MODULE__, Node.self()}, #{cmd.message}})")
+    """
+    #{Gen.GenEx.writeLog(state, "sending \#{inspect(#{cmd.message})} to \#{inspect(var(state, :#{cmd.to}))}")}
+    GenServer.cast(var(state, :#{cmd.to}), {{__MODULE__, Node.self()}, #{cmd.message}})
+    """
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.Send{} = cmd) do

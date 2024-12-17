@@ -20,8 +20,7 @@ defmodule Dsl.Root do
       ]
     ],
     entities: [
-      Dsl.Entities.Process.process,
-      Dsl.Entities.SubProcess.process
+      Dsl.Entities.Process.process
     ]
   }]
 

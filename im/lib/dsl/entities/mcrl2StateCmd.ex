@@ -1,9 +1,9 @@
-defmodule Dsl.Entities.StateCmd do
+defmodule Dsl.Entities.Mcrl2StateCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
-    name: :state!,
+    name: :mcrl2!,
     describe: "TODO",
-    target: Commands.State,
+    target: Commands.Mcrl2State,
     args: [:state],
     schema: [
       state: [

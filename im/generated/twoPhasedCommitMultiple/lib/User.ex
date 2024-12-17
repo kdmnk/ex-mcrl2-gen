@@ -13,42 +13,60 @@ defmodule User do
   end
 
   def handle_cast(:start, state) do
-    # Continues from a receive block...
+    state = updateState(state, %{:state => :idle})
     {:noreply, state}
   end
 
   def handle_cast({:chooseAnswer, true}, state) do
     Logger.info("User: sending #{inspect(1)} to #{inspect(var(state, :server))}")
     GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 1})
+
     {:noreply, state}
   end
 
   def handle_cast({:chooseAnswer, false}, state) do
     Logger.info("User: sending #{inspect(2)} to #{inspect(var(state, :server))}")
     GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 2})
+
     {:noreply, state}
   end
 
-  def handle_cast({server, m}, state) when m == 0 do
-    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 0' holds")
+  def handle_cast({server, m}, state) when state.state == :idle and m == 0 do
+    Logger.info("User [idle]: received #{inspect(m)} from #{inspect(server)} (m == 0)")
     state = updateState(state, %{:m => m, :server => server})
-    GenServer.cast({UserApi, Node.self()}, {:new_choice, %UserApi.ChoiceChooseAnswerState{choice: :chooseAnswer, vars: state}})
+
+    GenServer.cast(
+      {UserApi, Node.self()},
+      {:new_choice, %UserApi.ChoiceChooseAnswerState{choice: :chooseAnswer, vars: state}}
+    )
+
+    state = updateState(state, %{:state => :wait_for_server})
     {:noreply, state}
   end
 
-  def handle_cast({server, m}, state) when m == 3 do
-    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 3' holds")
+  def handle_cast({server, m}, state) when state.state == :wait_for_server and m == 3 do
+    Logger.info("User [wait_for_server]: received #{inspect(m)} from #{inspect(server)} (m == 3)")
     state = updateState(state, %{:m => m, :server => server})
-    Logger.info("User: sending #{inspect(4)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 4})
+
+    Logger.info(
+      "User [wait_for_server]: sending #{inspect(5)} to #{inspect(var(state, :server))}"
+    )
+
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 5})
+
     {:noreply, state}
   end
 
-  def handle_cast({server, m}, state) when m == 5 do
-    Logger.info("User: received #{inspect(m)} from #{inspect(server)} and 'm == 5' holds")
+  def handle_cast({server, m}, state) when state.state == :wait_for_server and m == 4 do
+    Logger.info("User [wait_for_server]: received #{inspect(m)} from #{inspect(server)} (m == 4)")
     state = updateState(state, %{:m => m, :server => server})
-    Logger.info("User: sending #{inspect(4)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 4})
+
+    Logger.info(
+      "User [wait_for_server]: sending #{inspect(5)} to #{inspect(var(state, :server))}"
+    )
+
+    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 5})
+
     {:noreply, state}
   end
 
@@ -57,8 +75,9 @@ defmodule User do
   end
 
   defp var(state, key) do
-    Map.get(state, key, key)
+    case Map.get(state, key) do
+      nil -> raise "Key #{inspect(key)} not found in state #{inspect(state)}"
+      x -> x
+    end
   end
-
 end
-

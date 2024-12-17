@@ -7,6 +7,7 @@ defmodule Commands.Receive do
     Enum.map(cmd.body, fn c ->
       Commands.ReceiveCase.writeEx(newState, c, newCmd)
     end)
+    |> Enum.join("\n")
   end
 
 

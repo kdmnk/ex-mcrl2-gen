@@ -10,10 +10,12 @@ defmodule Dsl.Entities.IfCmd do
         type: :quoted,
       ]
     ],
-    entities: [else: [
-      Dsl.Entities.IfElseCmd.cmd,
-    ], then: [
-      Dsl.Entities.IfThenCmd.cmd,
+    entities: [body: [
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.BroadcastCmd.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.CallRecurseCmd.cmd,
+      Dsl.Entities.ChangeStateCmd.cmd,
     ]]
   }
 

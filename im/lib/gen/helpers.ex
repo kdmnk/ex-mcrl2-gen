@@ -7,6 +7,19 @@ defmodule Gen.Helpers do
     write(state, String.duplicate(" ", (state.indentation + indent)*2) <> str, ending)
   end
 
+  def getCommands(cmdType, cmds, acc \\ []) do
+    Enum.reduce(cmds, acc, fn cmd, acc ->
+      case cmd do
+        %^cmdType{} -> [cmd | acc]
+        _ ->
+          case Map.get(cmd, :body) do
+            nil -> acc
+            body -> getCommands(cmdType, body, acc)
+          end
+      end
+    end)
+  end
+
   def getState(state) do
     state
     |> Keyword.keys()
@@ -52,9 +65,7 @@ defmodule Gen.Helpers do
     callback.(l)
   end
   def join(state, callback, [l | ls], separator) do
-    callback.(l)
-    Gen.Helpers.writeLn(state, separator)
-    join(state, callback, ls, separator)
+    "#{callback.(l)}#{separator}#{join(state, callback, ls, separator)}"
   end
 
   defp typeToMcrl2(type) do

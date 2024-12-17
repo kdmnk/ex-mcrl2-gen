@@ -14,81 +14,95 @@ defmodule Mach do
 
   def handle_cast(:start, state) do
     Logger.info("Mach: broadcasting #{inspect(0)} to users")
+
     var(state, :users)
     |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 0}) end)
-    state = updateState(state, %{:msgs => [], :remaining => length((var(state, :users)))})
-    state = receiveMessages(state)
+
+    state =
+      updateState(state, %{
+        :state => :receive_messages,
+        :msgs => [],
+        :remaining => length(var(state, :users))
+      })
+
     {:noreply, state}
   end
 
-  def handle_cast({some_user, m}, state) when m == 1 or m == 2 do
-    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 1 or m == 2' holds")
+  def handle_cast({some_user, m}, state)
+      when state.state == :receive_messages and ((m == 1 or m == 2) and state.remaining > 1) do
+    Logger.info(
+      "Mach [receive_messages]: received #{inspect(m)} from #{inspect(some_user)} (((m == 1 or m == 2) and remaining > 1))"
+    )
+
     state = updateState(state, %{:m => m, :some_user => some_user})
-    state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)], :remaining => var(state, :remaining) - 1})
-    state = receiveMessages(state)
+    state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)]})
+
+    state = updateState(state, %{:remaining => var(state, :remaining) - 1})
+
     {:noreply, state}
   end
 
-  def handle_cast({some_user, m}, state) when m == 4 do
-    Logger.info("Mach: received #{inspect(m)} from #{inspect(some_user)} and 'm == 4' holds")
+  def handle_cast({some_user, m}, state)
+      when state.state == :receive_messages and ((m == 1 or m == 2) and state.remaining == 1) do
+    Logger.info(
+      "Mach [receive_messages]: received #{inspect(m)} from #{inspect(some_user)} (((m == 1 or m == 2) and remaining == 1))"
+    )
+
     state = updateState(state, %{:m => m, :some_user => some_user})
+    state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)]})
+
+    state =
+      if 1 in var(state, :msgs) do
+        Logger.info("Mach [receive_messages]: broadcasting #{inspect(3)} to users")
+
+        var(state, :users)
+        |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 3}) end)
+
+        state =
+          updateState(state, %{:state => :receive_acks, :remaining => length(var(state, :users))})
+
+        state
+      else
+        state
+      end
+
+    state =
+      if !(1 in var(state, :msgs)) do
+        Logger.info("Mach [receive_messages]: broadcasting #{inspect(4)} to users")
+
+        var(state, :users)
+        |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 4}) end)
+
+        state
+      else
+        state
+      end
+
     {:noreply, state}
   end
 
-  def receiveMessages(state) do
-    state = if (var(state, :remaining) == 0) do
-      state = updateState(state, %{:msgs => var(state, :msgs)})
-      state = processAck(state)
-      state
-    else
-      state = updateState(state, %{:msgs => var(state, :msgs), :remaining => var(state, :remaining)})
-      state = receiveMsg(state)
-      state
-    end
+  def handle_cast({some_user, m}, state)
+      when state.state == :receive_acks and (m == 5 and state.remaining > 1) do
+    Logger.info(
+      "Mach [receive_acks]: received #{inspect(m)} from #{inspect(some_user)} ((m == 5 and remaining > 1))"
+    )
 
-    state
+    state = updateState(state, %{:m => m, :some_user => some_user})
+    state = updateState(state, %{:remaining => var(state, :remaining) - 1})
+
+    {:noreply, state}
   end
 
-  def receiveMsg(state) do
-    # Continues from a receive block...
-    state
-  end
+  def handle_cast({some_user, m}, state)
+      when state.state == :receive_acks and (m == 5 and state.remaining == 1) do
+    Logger.info(
+      "Mach [receive_acks]: received #{inspect(m)} from #{inspect(some_user)} ((m == 5 and remaining == 1))"
+    )
 
-  def processAck(state) do
-    state = if (2 in var(state, :msgs)) do
-      Logger.info("Mach: broadcasting #{inspect(5)} to users")
-      var(state, :users)
-      |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 5}) end)
-      state
-    else
-      Logger.info("Mach: broadcasting #{inspect(3)} to users")
-      var(state, :users)
-      |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 3}) end)
-      state
-    end
+    state = updateState(state, %{:m => m, :some_user => some_user})
+    Logger.info("Mach [receive_acks]: state: done")
 
-    state = updateState(state, %{:remaining => length((var(state, :users)))})
-    state = waitForAcks(state)
-    state
-  end
-
-  def waitForAcks(state) do
-    state = if (var(state, :remaining) > 0) do
-      state = updateState(state, %{})
-      state = rcvAck(state)
-      state = updateState(state, %{:remaining => var(state, :remaining) - 1})
-      state = waitForAcks(state)
-      state
-    else
-      state
-    end
-
-    state
-  end
-
-  def rcvAck(state) do
-    # Continues from a receive block...
-    state
+    {:noreply, state}
   end
 
   defp updateState(state, new_map) do
@@ -96,8 +110,9 @@ defmodule Mach do
   end
 
   defp var(state, key) do
-    Map.get(state, key, key)
+    case Map.get(state, key) do
+      nil -> raise "Key #{inspect(key)} not found in state #{inspect(state)}"
+      x -> x
+    end
   end
-
 end
-

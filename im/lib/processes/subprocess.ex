@@ -4,7 +4,7 @@ defmodule Processes.SubProcess do
 
   def writeMcrl2(%__MODULE__{} = p, %Gen.GenState{} = state) do
 
-    args = Gen.Helpers.getState(Keyword.merge(state.module_state, p.arg))
+    args = Gen.Helpers.getState(Keyword.merge(state.var_state, p.arg))
 
     Gen.Helpers.writeLn(state, "#{p.name}(#{args}) = ")
 

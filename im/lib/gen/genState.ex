@@ -1,5 +1,13 @@
 defmodule Gen.GenState do
-  defstruct [:file, :indentation, :bounded_vars, :module_name, :module_state, :subprocesses]
+  defstruct [
+    :file,
+    :indentation,
+    :bounded_vars,
+    :module_name,
+    :current_state,
+    :var_state,
+    :states_args
+  ]
 
   def new(filePath) do
     {:ok, file} = File.open(filePath, [:write])
