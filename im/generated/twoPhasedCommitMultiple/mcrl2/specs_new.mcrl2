@@ -1,6 +1,7 @@
 sort Pid = Nat;
 sort MessageType = Nat;
 sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);
+sort State = struct idle | wait_for_server | receive_messages | receive_acks;
 
 map LOSSY_NETWORK : Bool;
 eqn LOSSY_NETWORK = false;
@@ -8,7 +9,7 @@ eqn LOSSY_NETWORK = false;
 map User_PID : List(Pid);
 eqn User_PID = [1001, 1002, 1003];
 map Mach_PID : Pid;
-eqn Mach_PID = 2000;
+eqn Mach_PID = 1000;
 
 map SplitBroadcastedMessages: Pid # List(Pid) # MessageType -> FSet(Message);
 var v_sender: Pid;
@@ -26,77 +27,70 @@ eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receive
                      SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
                      + {Message(v_sender, head(v_receivers), v_message)} );
 
-
 act
   sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageType;
   broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageType;
-  lose, done, emptyNetwork, protocolDone;
-proc
-  User(pid: Pid) = 
-    Useridle(pid)
-  ;
-  Useridle(pid: Pid) = 
-    (sum server : Pid . sum m : MessageType . (
-      (m == 0) -> (receiveMessage(pid, server, m) . 
-        (
-          (tau .
-            sendMessage(pid, server, 1)
-          )
-        +
-          (tau .
-            sendMessage(pid, server, 2)
-          )
-        )
-        .
-        Userwait_for_server(pid)
-      )
-    ))
-  ;
+  lose, done, protocolDone, emptyNetwork;
 
-  Userwait_for_server(pid: Pid) = 
+proc
+  User(pid: Pid) = UserLoop(pid, idle);
+
+  UserLoop(pid: Pid, state: State) =
     (sum server : Pid . sum m : MessageType . (
-      (m == 3) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 5)
-      ) +
-      (m == 4) -> (receiveMessage(pid, server, m) . 
-        sendMessage(pid, server, 5)
+      (state == idle && m == 0) -> (receiveMessage(pid, server, m) . 
+          (tau .
+          sendMessage(pid, server, 1)
+          + tau .
+          sendMessage(pid, server, 2)
+          )
+          .
+          UserLoop(pid, wait_for_server)
       )
-    ))
-  ;
+      +
+      (state == wait_for_server && m == 3) -> (receiveMessage(pid, server, m) . 
+        sendMessage(pid, server, 5)
+        . UserLoop(pid, idle)
+      ) +
+      (state == wait_for_server && m == 5) -> (receiveMessage(pid, server, m) . 
+        sendMessage(pid, server, 5)
+        . UserLoop(pid, idle)
+      )
+    ));
+
   Mach(pid: Pid, users: List(Pid)) = 
     broadcastMessages(pid, users, 0)
     .
-    Machreceive_messages(pid, users, [], # (users))
+    MachLoop(pid, receive_messages, users, [], # (users))
   ;
-  Machreceive_messages(pid: Pid, users: List(Pid), msgs: List(Nat), remaining: Int) = 
-    (sum some_user : Pid . sum m : MessageType . (
-      (((m == 1 || m == 2) && remaining > 1)) -> (receiveMessage(pid, some_user, m) . 
-        Machreceive_messages(pid, users, (m |> msgs), remaining - 1)
-      ) +
-      (((m == 1 || m == 2) && remaining == 1)) -> (receiveMessage(pid, some_user, m) . 
+  MachLoop(pid: Pid, state: State, users: List(Pid), msgs: List(Nat), remaining: Int) = 
+    (sum server : Pid . sum m : MessageType . (
+      (state == receive_messages && (m == 1 || m ==2) && remaining > 1) -> (receiveMessage(pid, server, m) . 
+        MachLoop(pid, receive_messages, users, (m |> msgs), remaining - 1)
+      ) 
+      +
+      (state == receive_messages && (m == 1 || m == 2) && remaining == 1) -> (receiveMessage(pid, server, m) . 
         ((1 in (m |> msgs)) -> (
-          broadcastMessages(pid, users, 3)
-          .
-          Machreceive_acks(pid, users, # (users))
-        ) <> (
-          broadcastMessages(pid, users, 4)
-          .
-          Machreceive_acks(pid, users, # (users))
-        ))
+            broadcastMessages(pid, users, 3)
+            .
+            MachLoop(pid, receive_acks, users, [], # users)
+          )
+        ) . (!(1 in (m |> msgs)) -> (
+            broadcastMessages(pid, users, 4)
+            .
+            MachLoop(pid, receive_acks, users, [], # users)
+          )
+        )
       )
-    ))
-  ;
-
-  Machreceive_acks(pid: Pid, users: List(Pid), remaining: Int) = 
-    (sum some_user : Pid . sum m : MessageType . (
-      ((m == 5 && remaining > 1)) -> (receiveMessage(pid, some_user, m) . 
-        Machreceive_acks(pid, users, remaining - 1)
-      ) +
-      ((m == 5 && remaining == 1)) -> (receiveMessage(pid, some_user, m) . 
+      +
+      (state == receive_acks && m == 5 && remaining > 1) -> (receiveMessage(pid, server, m) . 
+        MachLoop(pid, receive_acks, users, [], remaining - 1)
+      ) 
+      +
+      (state == receive_acks && m == 5 && remaining == 1) -> (receiveMessage(pid, server, m) . 
         protocolDone
       )
-    ))
-  ;
+    ));
+  
 Network(msgs: FSet(Message)) =
   (sum sender : Pid, msg: MessageType . (
     (sum receiver : Pid .
@@ -113,7 +107,7 @@ Network(msgs: FSet(Message)) =
      (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
        + ((LOSSY_NETWORK) -> lose)
      ) . Network(msgs = msgs - {msg}))
-   + ((# msgs) == 0) -> (emptyNetwork . Network());
+    + ((# msgs) == 0) -> (emptyNetwork . Network());
 init
   allow({outgoingMessage, incomingMessage, broadcast, lose, done},
   comm({

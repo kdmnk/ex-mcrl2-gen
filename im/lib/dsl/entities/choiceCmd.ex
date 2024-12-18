@@ -15,7 +15,6 @@ defmodule Dsl.Entities.ChoiceCmd do
       Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.Mcrl2StateCmd.cmd,
       Dsl.Entities.ChangeStateCmd.cmd,
-      Dsl.Entities.SetCmd.cmd,
     ]]
   }
 

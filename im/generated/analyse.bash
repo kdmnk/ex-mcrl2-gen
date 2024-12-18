@@ -9,7 +9,7 @@ echo "pbes generated"
 #LpsXSim "$1.lps"
 pbessolve -v --file="$1.lts" "$1.pbes"
 #ltsgraph "$1.pbes.evidence.lts"
-#ltsgraph "$1.lts"
+ltsgraph "$1.lts"
 
 
 #lps2lts -D -t "$1.lps"

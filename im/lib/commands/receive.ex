@@ -1,50 +1,39 @@
 defmodule Commands.Receive do
+  alias Commands.ReceiveCase
   defstruct [:value, :from, :body]
 
   def writeEx(%Gen.GenState{} = state, %Commands.Receive{} = cmd) do
-    {newState, newCmd} = boundNewVariables(state, cmd)
+    newCmd = genVarNames(cmd)
 
     Enum.map(cmd.body, fn c ->
-      Commands.ReceiveCase.writeEx(newState, c, newCmd)
+      Commands.ReceiveCase.writeEx(state, c, newCmd)
     end)
     |> Enum.join("\n")
   end
 
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.Receive{} = cmd) do
-    {newState, newCmd} = boundNewVariables(state, cmd)
+    newCmd = genVarNames(cmd)
 
-    boundFrom = if newCmd.from not in state.bounded_vars do
-        "sum #{newCmd.from} : Pid . "
-    else
-      ""
-    end
-
-    boundValue = if newCmd.value not in state.bounded_vars do
-      "sum #{newCmd.value} : MessageType . "
-    else
-      ""
-    end
-    Gen.Helpers.writeLn(newState, "(#{boundFrom}#{boundValue}(")
+    Gen.Helpers.writeLn(state, "(sum #{newCmd.from} : Pid . sum #{newCmd.value} : MessageType . (")
 
     caseString = fn (condition) ->
       Gen.Helpers.writeLn(Gen.GenState.indent(state), buildCmdString(newCmd, condition))
     end
 
     Gen.Helpers.join(
-      Gen.GenState.indent(newState),
-      fn (caseCmd) ->
+      fn (%ReceiveCase{} = caseCmd) ->
         caseString.(Gen.GenMcrl2.stringifyAST(caseCmd.condition))
         Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state, 2), caseCmd.body)
       end,
       cmd.body,
-      ") +"
+      fn -> Gen.Helpers.writeLn(Gen.GenState.indent(state), ") +") end
     )
-    Gen.Helpers.writeLn(Gen.GenState.indent(newState), ")")
-    Gen.Helpers.writeLn(newState, "))")
+    Gen.Helpers.writeLn(Gen.GenState.indent(state), ")")
+    Gen.Helpers.writeLn(state, "))")
   end
 
-  def boundNewVariables(%Gen.GenState{} = state, %Commands.Receive{} = cmd) do
+  def genVarNames(%Commands.Receive{} = cmd) do
     value = if cmd.value == nil do
       "val#{Gen.Helpers.getNextId()}"
     else
@@ -57,7 +46,7 @@ defmodule Commands.Receive do
       cmd.from
     end
 
-    {%{state | bounded_vars: [value | [from | state.bounded_vars]]}, %{cmd | value: value, from: from}}
+    %{cmd | value: value, from: from}
   end
 
   def buildCmdString(%Commands.Receive{} = cmd, condition) do

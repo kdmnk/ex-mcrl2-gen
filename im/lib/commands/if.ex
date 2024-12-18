@@ -1,22 +1,24 @@
 defmodule Commands.If do
-  defstruct [:condition, :body]
+  defstruct [:condition, :then, :else]
 
 
   def writeEx(%Gen.GenState{} = state, %Commands.If{} = cmd) do
     """
     state = if (#{Gen.GenEx.stringifyASTwithLookup(cmd.condition)}) do
-      #{Gen.GenEx.writeCmds(state, cmd.body)}
+      #{Gen.GenEx.writeCmds(state, cmd.then)}
       state
     else
-      state
+      #{Gen.GenEx.writeCmds(state, cmd.else)}
     end
     """
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.If{} = cmd) do
     Gen.Helpers.writeLn(state, "((#{Gen.GenMcrl2.stringifyAST(cmd.condition)}) -> (")
-    Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.body)
-    Gen.Helpers.writeLn(state, ")")
+    Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state), cmd.then)
+    Gen.Helpers.writeLn(state, ") <> (")
+    Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state), cmd.else)
+    Gen.Helpers.writeLn(state, "))")
   end
 
 end

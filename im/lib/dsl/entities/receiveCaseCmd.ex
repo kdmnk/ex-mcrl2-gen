@@ -15,9 +15,7 @@ defmodule Dsl.Entities.ReceiveCaseCmd do
       Dsl.Entities.BroadcastCmd.cmd,
       Dsl.Entities.ChoiceCmd.cmd,
       Dsl.Entities.Mcrl2StateCmd.cmd,
-      Dsl.Entities.CallRecurseCmd.cmd,
       Dsl.Entities.ChangeStateCmd.cmd,
-      Dsl.Entities.SetCmd.cmd,
       Dsl.Entities.IfCmd.cmd,
     ]]
   }

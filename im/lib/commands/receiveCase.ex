@@ -20,7 +20,7 @@ defmodule Commands.ReceiveCase do
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.ReceiveCase{} = cmd) do
     Gen.Helpers.writeLn(state, "(#{Gen.GenMcrl2.stringifyAST(cmd.condition)}) -> (")
-    Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.body)
+    Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state), cmd.body)
     Gen.Helpers.writeLn(state, ")")
   end
 

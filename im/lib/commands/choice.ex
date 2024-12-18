@@ -8,9 +8,15 @@ defmodule Commands.Choice do
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.Choice{} = cmd) do
-    Gen.Helpers.writeLn(state, "(tau .", 1)
-    Gen.GenMcrl2.writeCmds(%{state | indentation: state.indentation+1}, cmd.body, "+ tau .")
-    Gen.Helpers.writeLn(state, ")", 1)
+    Gen.Helpers.writeLn(state, "(")
+    Gen.Helpers.join(fn cmd ->
+        Gen.Helpers.writeLn(state, "(tau .", 1)
+        Commands.Command.writeMcrl2(Gen.GenState.indent(state, 2), cmd)
+        Gen.Helpers.writeLn(state, ")", 1)
+      end,
+      cmd.body,
+      fn -> Gen.Helpers.writeLn(state, "+") end)
+    Gen.Helpers.writeLn(state, ")")
   end
 
   def getState(state) do

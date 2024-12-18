@@ -59,13 +59,24 @@ defmodule Gen.Helpers do
     String.downcase("#{cleaned}") <> "_pid"
   end
 
-  def join(state, callback, list, separator \\ ".")
-  def join(_, _, [], _), do: ""
-  def join(_, callback, [l | []], _) do
+  def joinStr(callback, list, separator \\ "\n")
+  def joinStr(_, [], _), do: ""
+  def joinStr(callback, [l | []], _) do
     callback.(l)
   end
-  def join(state, callback, [l | ls], separator) do
-    "#{callback.(l)}#{separator}#{join(state, callback, ls, separator)}"
+  def joinStr(callback, [l | ls], separator) do
+    "#{callback.(l)}#{separator}#{joinStr(callback, ls, separator)}"
+  end
+
+  def join(callback, list, separator)
+  def join(_, [], _), do: ""
+  def join(callback, [l | []], _) do
+    callback.(l)
+  end
+  def join(callback, [l | ls], separator) do
+    callback.(l)
+    separator.()
+    join(callback, ls, separator)
   end
 
   defp typeToMcrl2(type) do

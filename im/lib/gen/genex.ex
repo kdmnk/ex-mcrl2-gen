@@ -31,7 +31,7 @@ defmodule Gen.GenEx do
   end
 
   def writeCmds(state, cmds) do
-    Gen.Helpers.join(state, fn cmd -> Commands.Command.writeEx(state, cmd) end, cmds, "\n")
+    Gen.Helpers.joinStr(fn cmd -> Commands.Command.writeEx(state, cmd) end, cmds)
   end
 
   def writeLog(%Gen.GenState{} = state, str) do

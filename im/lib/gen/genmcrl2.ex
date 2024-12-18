@@ -11,25 +11,15 @@ defmodule Gen.GenMcrl2 do
     run(folder, conf)
   end
 
-  def run(folder, %{:messageType => messageType, :lossyNetwork => lossyNetwork, :processes => all_process}) do
+  def run(folder, %{:messageType => messageType, :lossyNetwork => lossyNetwork, :processes => processes}) do
     state = Gen.GenState.new("#{folder}/specs.mcrl2")
-    processes = Enum.filter(all_process, fn
-      %Process{} -> true
-     _ -> false
-    end)
 
     Gen.Helpers.write(state, getDeclarationsString(messageType, lossyNetwork, processes))
 
-    for %Process{identifier: id} = p <- processes do
-      subprocesses = Enum.filter(all_process, fn
-        %SubProcess{process: ^id} -> true
-        _ -> false
-      end)
-      var_state = Keyword.merge([pid: "Pid"], p.state)
-      state = %{state | module_name: p.identifier, var_state: var_state, indentation: state.indentation+1}
+    for %Process{} = p <- processes do
+      mcrl2_static_state = Keyword.merge([pid: "Pid"], p.state)
+      state = %{state | module_name: p.identifier, mcrl2_static_state: mcrl2_static_state, indentation: state.indentation+1}
       Process.writeMcrl2(p, state)
-      subprocesses
-      |> Enum.map(fn x -> SubProcess.writeMcrl2(x, state) end)
     end
 
     Gen.Helpers.write(state, getNetworkString())
@@ -41,19 +31,19 @@ defmodule Gen.GenMcrl2 do
 
   def writeCmds(state, cmds, separator \\ "."), do:
     Gen.Helpers.join(
-      state,
       fn (cmd) -> Commands.Command.writeMcrl2(state, cmd) end,
       cmds,
-      separator
+      fn -> Gen.Helpers.writeLn(state, separator) end
     )
 
   defp getDeclarationsString(messageType, lossyNetwork, processes) do
-    randomPids = Enum.map(processes, fn p ->
+    randomPids = Enum.zip(1..100, processes)
+    |> Enum.map(fn {n, p} ->
       case p.quantity do
         x when x > 1 ->
-          pids = Enum.join(Enum.map(1..x, fn _ -> :rand.uniform(100) end), ", ")
+          pids = Enum.join(Enum.map(1..x, fn y -> "#{n}00#{y}" end), ", ")
           "map #{p.identifier}_PID : List(Pid);\neqn #{p.identifier}_PID = [#{pids}];\n"
-        _ -> "map #{p.identifier}_PID : Pid;\neqn #{p.identifier}_PID = #{:rand.uniform(100)};"
+        _ -> "map #{p.identifier}_PID : Pid;\neqn #{p.identifier}_PID = #{n}000;"
       end
     end)
     |> Enum.join("")
@@ -88,7 +78,7 @@ defmodule Gen.GenMcrl2 do
     act
       sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageType;
       broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageType;
-      lose;
+      lose, done, emptyNetwork, protocolDone;
     proc
     """
   end
@@ -109,7 +99,8 @@ defmodule Gen.GenMcrl2 do
        (sum msg: Message . (msg in msgs) ->
          (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
            + ((LOSSY_NETWORK) -> lose)
-         ) . Network(msgs = msgs - {msg}));
+         ) . Network(msgs = msgs - {msg}))
+       + ((# msgs) == 0) -> (emptyNetwork . Network());
     """
 
   defp getInitString(processes) do
@@ -141,11 +132,12 @@ defmodule Gen.GenMcrl2 do
 
     """
     init
-      allow({outgoingMessage, incomingMessage, broadcast, lose},
+      allow({outgoingMessage, incomingMessage, broadcast, lose, done},
       comm({
         sendMessage|networkReceiveMessage -> outgoingMessage,
         networkSendMessage|receiveMessage -> incomingMessage,
-        broadcastMessages|networkBroadcastMessages -> broadcast
+        broadcastMessages|networkBroadcastMessages -> broadcast,
+        protocolDone|emptyNetwork -> done
       },
         #{pr} || Network({})
       )
@@ -157,14 +149,15 @@ defmodule Gen.GenMcrl2 do
     case ast do
       {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
       {:|, _pos, [left, right]} -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
-      {:or, _pos, [left, right]} -> "#{stringifyAST(left)} || #{stringifyAST(right)}"
-      {:and, _pos, [left, right]} -> "#{stringifyAST(left)} && #{stringifyAST(right)}"
+      {:or, _pos, [left, right]} -> "(#{stringifyAST(left)} || #{stringifyAST(right)})"
+      {:and, _pos, [left, right]} -> "(#{stringifyAST(left)} && #{stringifyAST(right)})"
       {:!, _pos, arg} -> "!#{stringifyAST(arg)}"
       {:length, _pos, arg} -> "# #{stringifyAST(arg)}"
       [a | b] when b != [] -> "(#{stringifyAST(a)}, #{stringifyAST(b)})"
       [a] -> "(#{stringifyAST(a)})"
       {var, _pos, nil} -> var
       var when is_atom(var) -> var
+      var when is_binary(var) -> var
       int when is_integer(int) -> int
       [] -> "[]"
     end

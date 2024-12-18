@@ -2,10 +2,9 @@ defmodule Gen.GenState do
   defstruct [
     :file,
     :indentation,
-    :bounded_vars,
     :module_name,
     :current_state,
-    :var_state,
+    :mcrl2_static_state,
     :states_args
   ]
 
@@ -14,16 +13,11 @@ defmodule Gen.GenState do
     %Gen.GenState{
       file: file,
       indentation: 0,
-      bounded_vars: []
     }
   end
 
   def indent(%Gen.GenState{} = state, value \\ 1) do
     %{state | indentation: state.indentation + value}
-  end
-
-  def addBoundVars(%Gen.GenState{} = state, vars) do
-    %{state | bounded_vars: state.bounded_vars ++ vars}
   end
 
 end

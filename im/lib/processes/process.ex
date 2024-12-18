@@ -4,14 +4,20 @@ defmodule Processes.Process do
 
   defstruct [:identifier, :state, :states, :init, :quantity]
 
-  def writeMcrl2(%__MODULE__{} = p, state) do
-    Gen.Helpers.writeLn(state, "#{p.identifier}(#{Gen.Helpers.getState(state.var_state)}) = ")
+  def writeMcrl2(%__MODULE__{} = p, %Gen.GenState{} = state) do
+    Gen.Helpers.writeLn(state, "#{p.identifier}(#{Gen.Helpers.getState(state.mcrl2_static_state)}) = ")
 
     GenMcrl2.writeCmds(
-      Gen.GenState.indent(Gen.GenState.addBoundVars(state, ["pid" | stateList(p)])),
-      p.states
+      Gen.GenState.indent(state),
+      p.init
     )
+    Gen.Helpers.writeLn(state, ";")
 
+    GenMcrl2.writeCmds(
+      state,
+      p.states,
+      ";\n"
+    )
     Gen.Helpers.writeLn(state, ";")
   end
 
@@ -92,9 +98,8 @@ defmodule Processes.Process do
   defp writeProcess(%Gen.GenState{} = state, p, choices) do
     s = %Gen.GenState{
       state
-      | bounded_vars: state.bounded_vars ++ stateList(p),
-        module_name: p.identifier,
-        var_state: stateList(p),
+      | module_name: p.identifier,
+        mcrl2_static_state: stateList(p),
         states_args: Map.new(p.states, fn %Commands.State{value: value, args: args} -> {value, args} end)
     }
 

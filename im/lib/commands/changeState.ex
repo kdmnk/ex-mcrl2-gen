@@ -12,5 +12,9 @@ defmodule Commands.ChangeState do
   end
 
   def writeMcrl2(%Gen.GenState{} = state, %Commands.ChangeState{} = cmd) do
+    args = Keyword.keys(state.mcrl2_static_state) ++ cmd.args
+    |> Enum.map(&Gen.GenMcrl2.stringifyAST/1)
+    |> Enum.join(", ")
+    Gen.Helpers.writeLn(state, "#{state.module_name}#{cmd.value}(#{args})")
   end
 end
