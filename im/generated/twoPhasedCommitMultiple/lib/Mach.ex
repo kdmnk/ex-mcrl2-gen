@@ -35,9 +35,13 @@ defmodule Mach do
     )
 
     state = updateState(state, %{:m => m, :some_user => some_user})
-    state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)]})
 
-    state = updateState(state, %{:remaining => var(state, :remaining) - 1})
+    state =
+      updateState(state, %{
+        :state => :receive_messages,
+        :msgs => [var(state, :m) | var(state, :msgs)],
+        :remaining => var(state, :remaining) - 1
+      })
 
     {:noreply, state}
   end
@@ -49,10 +53,9 @@ defmodule Mach do
     )
 
     state = updateState(state, %{:m => m, :some_user => some_user})
-    state = updateState(state, %{:msgs => [var(state, :m) | var(state, :msgs)]})
 
     state =
-      if 1 in var(state, :msgs) do
+      if 1 in [var(state, :m) | var(state, :msgs)] do
         Logger.info("Mach [receive_messages]: broadcasting #{inspect(3)} to users")
 
         var(state, :users)
@@ -63,18 +66,14 @@ defmodule Mach do
 
         state
       else
-        state
-      end
-
-    state =
-      if !(1 in var(state, :msgs)) do
         Logger.info("Mach [receive_messages]: broadcasting #{inspect(4)} to users")
 
         var(state, :users)
         |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, 4}) end)
 
-        state
-      else
+        state =
+          updateState(state, %{:state => :receive_acks, :remaining => length(var(state, :users))})
+
         state
       end
 
@@ -88,7 +87,9 @@ defmodule Mach do
     )
 
     state = updateState(state, %{:m => m, :some_user => some_user})
-    state = updateState(state, %{:remaining => var(state, :remaining) - 1})
+
+    state =
+      updateState(state, %{:state => :receive_acks, :remaining => var(state, :remaining) - 1})
 
     {:noreply, state}
   end
@@ -100,8 +101,7 @@ defmodule Mach do
     )
 
     state = updateState(state, %{:m => m, :some_user => some_user})
-    Logger.info("Mach [receive_acks]: state: done")
-
+    Logger.info("Mach [receive_acks]: state: protocolDone")
     {:noreply, state}
   end
 

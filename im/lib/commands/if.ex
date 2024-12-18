@@ -9,6 +9,7 @@ defmodule Commands.If do
       state
     else
       #{Gen.GenEx.writeCmds(state, cmd.else)}
+      state
     end
     """
   end
