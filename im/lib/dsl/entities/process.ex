@@ -10,11 +10,11 @@ defmodule Dsl.Entities.Process do
       ],
       state: [
         type: {:map, :atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}},
-        doc: "State of the process, defined as a map."
+        doc: "Initial arguments for the process."
       ],
       quantity: [
         type: :integer,
-        doc: "Number of processes to run."
+        doc: "Number of processes to generate (only for mCRL2)."
       ]
     ],
     entities: [

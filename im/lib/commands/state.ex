@@ -14,6 +14,6 @@ defmodule Commands.State do
     end
     Gen.Helpers.writeLn(state, "#{state.module_name}#{cmd.value}(#{Gen.Helpers.getState(Keyword.merge(state.mcrl2_static_state, args))}) = ")
 
-    Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state), cmd.body)
+    Gen.GenMcrl2.writeCmds(Gen.GenState.indent(state), cmd.body, "+")
   end
 end

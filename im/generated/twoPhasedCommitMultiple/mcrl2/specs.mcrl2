@@ -57,7 +57,10 @@ proc
     (sum server : Pid . sum m : MessageType . (
       (m == 3) -> (receiveMessage(pid, server, m) . 
         sendMessage(pid, server, 5)
-      ) +
+      )
+    ))
+    +
+    (sum server : Pid . sum m : MessageType . (
       (m == 4) -> (receiveMessage(pid, server, m) . 
         sendMessage(pid, server, 5)
       )
@@ -72,7 +75,10 @@ proc
     (sum some_user : Pid . sum m : MessageType . (
       (((m == 1 || m == 2) && remaining > 1)) -> (receiveMessage(pid, some_user, m) . 
         Machreceive_messages(pid, users, (m |> msgs), remaining - 1)
-      ) +
+      )
+    ))
+    +
+    (sum some_user : Pid . sum m : MessageType . (
       (((m == 1 || m == 2) && remaining == 1)) -> (receiveMessage(pid, some_user, m) . 
         ((1 in (m |> msgs)) -> (
           broadcastMessages(pid, users, 3)
@@ -91,7 +97,10 @@ proc
     (sum some_user : Pid . sum m : MessageType . (
       ((m == 5 && remaining > 1)) -> (receiveMessage(pid, some_user, m) . 
         Machreceive_acks(pid, users, remaining - 1)
-      ) +
+      )
+    ))
+    +
+    (sum some_user : Pid . sum m : MessageType . (
       ((m == 5 && remaining == 1)) -> (receiveMessage(pid, some_user, m) . 
         protocolDone
       )
