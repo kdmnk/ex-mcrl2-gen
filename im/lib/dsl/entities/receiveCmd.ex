@@ -4,15 +4,23 @@ defmodule Dsl.Entities.ReceiveCmd do
     name: :rcv!,
     describe: "Receive command.",
     target: Commands.Receive,
-    args: [:value],
+    args: [:value, :condition],
     schema: [
       value: [
         type: {:or, [:atom, {:tuple, [{:or, [:atom, :nil]}, :atom]}]},
         doc: "Variable name for received value",
+      ],
+      condition: [
+        type: :quoted,
       ]
     ],
     entities: [body: [
-      Dsl.Entities.ReceiveCaseCmd.cmd
+      Dsl.Entities.SendCommand.cmd,
+      Dsl.Entities.BroadcastCmd.cmd,
+      Dsl.Entities.ChoiceCmd.cmd,
+      Dsl.Entities.Mcrl2StateCmd.cmd,
+      Dsl.Entities.ChangeStateCmd.cmd,
+      Dsl.Entities.IfCmd.cmd,
     ]],
     transform: {__MODULE__, :transform_run, []}
   }

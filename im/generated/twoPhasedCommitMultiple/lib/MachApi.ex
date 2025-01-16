@@ -18,6 +18,4 @@ defmodule MachApi do
   def init(_) do
     {:ok, {nil, nil}}
   end
-
 end
-

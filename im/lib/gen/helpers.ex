@@ -7,6 +7,19 @@ defmodule Gen.Helpers do
     write(state, String.duplicate(" ", (state.indentation + indent)*2) <> str, ending)
   end
 
+  def getCommands(cmdType, cmds, acc \\ []) do
+    Enum.reduce(cmds, acc, fn cmd, acc ->
+      case cmd do
+        %^cmdType{} -> [cmd | acc]
+        _ ->
+          case Map.get(cmd, :body) do
+            nil -> acc
+            body -> getCommands(cmdType, body, acc)
+          end
+      end
+    end)
+  end
+
   def getState(state) do
     state
     |> Keyword.keys()
@@ -46,21 +59,31 @@ defmodule Gen.Helpers do
     String.downcase("#{cleaned}") <> "_pid"
   end
 
-  def join(state, callback, list, separator \\ ".")
-  def join(_, _, [], _), do: ""
-  def join(_, callback, [l | []], _) do
+  def joinStr(callback, list, separator \\ "\n")
+  def joinStr(_, [], _), do: ""
+  def joinStr(callback, [l | []], _) do
     callback.(l)
   end
-  def join(state, callback, [l | ls], separator) do
-    callback.(l)
-    Gen.Helpers.writeLn(state, separator)
-    join(state, callback, ls, separator)
+  def joinStr(callback, [l | ls], separator) do
+    "#{callback.(l)}#{separator}#{joinStr(callback, ls, separator)}"
   end
 
-  defp typeToMcrl2(type) do
+  def join(callback, list, separator)
+  def join(_, [], _), do: ""
+  def join(callback, [l | []], _) do
+    callback.(l)
+  end
+  def join(callback, [l | ls], separator) do
+    callback.(l)
+    separator.()
+    join(callback, ls, separator)
+  end
+
+  def typeToMcrl2(type) do
     case type do
       {:pid, _} -> "Pid"
       {:list, type} -> "List(#{typeToMcrl2(type)})"
+      {:set, type} -> "FSet(#{typeToMcrl2(type)})"
       p -> p
     end
   end

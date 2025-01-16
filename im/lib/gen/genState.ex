@@ -1,21 +1,23 @@
 defmodule Gen.GenState do
-  defstruct [:file, :indentation, :bounded_vars, :module_name, :module_state, :subprocesses]
+  defstruct [
+    :file,
+    :indentation, # for mcrl2 writing
+    :module_name,
+    :current_state, # for Ex
+    :mcrl2_static_state, # pid and Process's main args
+    :states_args # list of all states and their args
+  ]
 
   def new(filePath) do
     {:ok, file} = File.open(filePath, [:write])
     %Gen.GenState{
       file: file,
       indentation: 0,
-      bounded_vars: []
     }
   end
 
   def indent(%Gen.GenState{} = state, value \\ 1) do
     %{state | indentation: state.indentation + value}
-  end
-
-  def addBoundVars(%Gen.GenState{} = state, vars) do
-    %{state | bounded_vars: state.bounded_vars ++ vars}
   end
 
 end

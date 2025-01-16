@@ -10,11 +10,10 @@ defmodule Dsl.Entities.IfCmd do
         type: :quoted,
       ]
     ],
-    entities: [else: [
-      Dsl.Entities.IfElseCmd.cmd,
-    ], then: [
-      Dsl.Entities.IfThenCmd.cmd,
-    ]]
+    entities: [
+      then: [Dsl.Entities.IfThenCmd.cmd],
+      else: [Dsl.Entities.IfElseCmd.cmd],
+    ]
   }
 
 end

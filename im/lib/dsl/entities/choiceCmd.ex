@@ -4,17 +4,33 @@ defmodule Dsl.Entities.ChoiceCmd do
     name: :choice!,
     describe: "Non deterministic choice.",
     target: Commands.Choice,
-    args: [:label],
+    args: [:name, :values],
     schema: [
-      label: [
-        type: :string
+      name: [
+        type: :atom
       ],
+      values: [
+        type: {:or, [
+          {:tuple, [:integer, :integer]},
+          {:list, {:or, [:atom, :integer]}}
+        ]}
+      ]
     ],
     entities: [body: [
       Dsl.Entities.SendCommand.cmd,
       Dsl.Entities.BroadcastCmd.cmd,
-      Dsl.Entities.StateCmd.cmd
-    ]]
+      Dsl.Entities.Mcrl2StateCmd.cmd,
+      Dsl.Entities.ChangeStateCmd.cmd,
+    ]],
+    transform: {__MODULE__, :transform_run, []}
   }
+
+  @spec transform_run(__MODULE__) :: {:ok, __MODULE__}
+  def transform_run(entity) do
+    case entity.values do
+      {from, to} -> {:ok, %{entity | values: Range.new(from, to)}}
+      _value -> {:ok, entity}
+    end
+  end
 
 end

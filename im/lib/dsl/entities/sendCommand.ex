@@ -7,10 +7,10 @@ defmodule Dsl.Entities.SendCommand do
     args: [:to, :message],
     schema: [
       to: [
-        type: {:or, [:atom, :string]}
+        type: :quoted
       ],
       message: [
-        type: {:or, [:atom, :string, :integer]}
+        type: :quoted
       ]
     ],
   }

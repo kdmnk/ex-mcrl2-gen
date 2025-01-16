@@ -2,18 +2,13 @@ defmodule Dsl.Entities.IfThenCmd do
 
   def cmd(), do: %Spark.Dsl.Entity{
     name: :then!,
-    describe: "",
+    describe: "If condition holds, continue to then! child entity, otherwise, continue with else! child entity.",
     target: Commands.IfThen,
     args: [],
-    schema: [
-    ],
     entities: [body: [
       Dsl.Entities.SendCommand.cmd,
       Dsl.Entities.BroadcastCmd.cmd,
-      Dsl.Entities.ChoiceCmd.cmd,
-      Dsl.Entities.CallCmd.cmd,
-      Dsl.Entities.CallRecurseCmd.cmd,
-      Dsl.Entities.StateCmd.cmd
+      Dsl.Entities.ChangeStateCmd.cmd,
     ]]
   }
 

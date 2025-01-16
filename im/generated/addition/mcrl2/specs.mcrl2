@@ -1,0 +1,105 @@
+sort Pid = Nat;
+sort MessageData = Nat;
+sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageData);
+
+map LOSSY_NETWORK : Bool;
+eqn LOSSY_NETWORK = false;
+
+map ALLOW_CRASH : Bool;
+eqn ALLOW_CRASH = false;
+
+map NETWORK_LIMIT : Nat;
+eqn NETWORK_LIMIT = 20;
+
+map MakeMessage: Nat -> MessageData;
+var msg: Nat;
+eqn MakeMessage(msg) = msg;
+
+map Client_PID : Pid;
+eqn Client_PID = 1000;map Server_PID : Pid;
+eqn Server_PID = 2000;
+
+map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> FSet(Message);
+var v_sender: Pid;
+   v_receivers: List(Pid);
+    v_message: MessageData;
+eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
+    SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
+map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageData # FSet(Message) -> FSet(Message);
+var v_sender: Pid;
+    v_receivers: List(Pid);
+    v_message: MessageData;
+    v_msgs: FSet(Message);
+eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
+    ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
+                     SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
+                     + {Message(v_sender, head(v_receivers), v_message)} );
+
+
+act
+  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageData;
+  broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageData;
+  lose, done, emptyNetwork, protocolDone;
+  resume, crash, timeout: Pid;
+  
+proc
+  Client(pid: Pid, server: Pid) = 
+    sendMessage(pid, server, MakeMessage(1))
+    .
+    Clientwait_for_answer(pid, server)
+  ;
+  Clientwait_for_answer(pid: Pid, server: Pid) = 
+    (sum server : Pid . sum n : MessageData . (
+      (n == 2) -> (receiveMessage(pid, server, n) . 
+        protocolDone
+      )
+    ))
+    + (ALLOW_CRASH) -> crash(pid) . Clientwait_for_answercrashed(pid, server);
+
+    Clientwait_for_answercrashed(pid: Pid, server: Pid) = 
+      (sum server : Pid . sum m : MessageData . receiveMessage(pid, server, m)) . Clientwait_for_answercrashed(pid, server)
+      + resume(pid) . Clientwait_for_answer(pid, server)
+  ;
+  Server(pid: Pid) = 
+    Serverwait_for_number(pid)
+  ;
+  Serverwait_for_number(pid: Pid) = 
+    (sum some_client : Pid . sum n : MessageData . (
+      (true) -> (receiveMessage(pid, some_client, n) . 
+        sendMessage(pid, some_client, MakeMessage(n + 1))
+      )
+    ))
+    + (ALLOW_CRASH) -> crash(pid) . Serverwait_for_numbercrashed(pid);
+
+    Serverwait_for_numbercrashed(pid: Pid) = 
+      (sum server : Pid . sum m : MessageData . receiveMessage(pid, server, m)) . Serverwait_for_numbercrashed(pid)
+      + resume(pid) . Serverwait_for_number(pid)
+  ;
+Network(msgs: FSet(Message)) =
+  (sum sender : Pid, msg: MessageData . ((# msgs) < NETWORK_LIMIT) -> (
+    (sum receiver : Pid .
+      networkReceiveMessage(sender, receiver, msg) .
+      Network(msgs = msgs + {Message(sender, receiver, msg)})
+    )
+    +
+    (sum receivers: List(Pid) .
+      networkBroadcastMessages(sender, receivers, msg) .
+      Network(msgs = msgs + SplitBroadcastedMessages(sender, receivers, msg)))
+   ))
+   +
+   (sum msg: Message . (msg in msgs) ->
+     (networkSendMessage(receiverID(msg), senderID(msg), message(msg))
+       + ((LOSSY_NETWORK) -> lose)
+     ) . Network(msgs = msgs - {msg}))
+   + ((# msgs) == 0) -> (emptyNetwork . Network());
+init
+  allow({outgoingMessage, incomingMessage, broadcast, lose, done, timeout, resume, crash},
+  comm({
+    sendMessage|networkReceiveMessage -> outgoingMessage,
+    networkSendMessage|receiveMessage -> incomingMessage,
+    broadcastMessages|networkBroadcastMessages -> broadcast,
+    protocolDone|emptyNetwork -> done
+  },
+    Client(Client_PID, Server_PID) || Server(Server_PID) || Network({})
+  )
+);

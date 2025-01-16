@@ -2,99 +2,61 @@ defmodule Protocols.TwoPhasedCommitMultiple do
   use Dsl.Im,
     extensions: [Dsl.Root]
 
-  #variables
-  users = :users
-  some_user = :some_user
-  server = :server
-  m = :m
-
-  commitRequest = 0
-  yesResponse = 1
-  noResponse = 2
-
-  commitMessage = 3
-  ack = 4
-
-  rollback = 5
-
   messageType :Nat
   lossyNetwork false
+  doneRequirement [:protocolDone, :emptyNetwork]
 
   process User, %{}, 3 do
-    rcv! {m, server} do
-      when! m == 0 do
-        choice! "chooseAnswer" do
-          send! server, yesResponse
-          send! server, noResponse
+    init do
+      state! :idle, []
+    end
+    state :idle do
+      rcv! {:m, :server}, :m == 0 do
+        choice! :answer, [1, 2] do
+          send! :server, :answer
+        end
+        state! :wait_for_server, []
+      end
+    end
+    state :wait_for_server do
+      rcv! {:m, :server}, :m == 3 do
+        send! :server, 5
+      end
+      rcv! {:m, :server}, :m == 4 do
+        send! :server, 5
+      end
+    end
+  end
+
+  process Mach, %{:users => {:list, {:pid, User}}}, 1 do
+    init do
+      broadcast! :users, 0
+      state! :receive_messages, [[], length(:users)]
+    end
+    state :receive_messages, %{:msgs => {:list, :Nat}, :remaining => :Int} do
+      rcv! {:m, :some_user}, (:m == 1 or :m == 2) and :remaining > 1 do
+        state! :receive_messages, [[:m | :msgs], :remaining-1]
+      end
+      rcv! {:m, :some_user}, (:m == 1 or :m == 2) and :remaining == 1 do
+        if! 1 in [:m | :msgs] do
+          then! do
+            broadcast! :users, 3
+            state! :receive_acks, [length(:users)]
+          end
+          else! do
+            broadcast! :users, 4
+            state! :receive_acks, [length(:users)]
+          end
         end
       end
-      when! m == 3 do
-        send! server, ack
-      end
-      when! m == 5 do
-        send! server, ack
-      end
     end
-    recurse! do: nil
-  end
-
-  process Mach, %{users => {:list, {:pid, User}}}, 1 do
-    broadcast! users, commitRequest
-    call! "receiveMessages", [[], length(users)]
-  end
-
-  subprocess Mach, "receiveMessages", %{:msgs => {:list, :Nat}, :remaining => :Int} do
-    if! remaining == 0 do
-      then! do
-        call! "processAck", [:msgs]
+    state :receive_acks, %{:remaining => :Int} do
+      rcv! {:m, :some_user}, :m == 5 and :remaining > 1 do
+        state! :receive_acks, [:remaining -1]
       end
-      else! do
-        call! "receiveMsg", [:msgs, :remaining]
+      rcv! {:m, :some_user}, :m == 5 and :remaining == 1 do
+        mcrl2! :protocolDone, []
       end
     end
   end
-
-  subprocess Mach, "receiveMsg", %{:msgs => {:list, :Nat}, :remaining => :Int} do
-    rcv! {m, some_user} do
-      when! m == 1 or m == 2 do
-        call! "receiveMessages", [[m | :msgs], :remaining-1]
-      end
-    end
-  end
-
-  subprocess Mach, "processAck", %{:msgs => {:list, :Nat}} do
-    if! 2 in msgs do
-      then! do
-        broadcast! users, rollback
-      end
-      else! do
-        broadcast! users, commitMessage
-      end
-    end
-    call! "waitForAcks", [length(users)]
-  end
-
-  subprocess Mach, "waitForAcks", %{:remaining => :Int} do
-    if! remaining > 0 do
-      then! do
-        state! :tau
-        call! "rcvAck", []
-        call! "waitForAcks", [:remaining-1]
-      end
-      else! do
-        state! :done
-        recurse! do: nil
-      end
-    end
-  end
-
-  subprocess Mach, "rcvAck", %{} do
-    rcv! {m, some_user} do
-      when! m == 4 do
-        state! :tau
-      end
-    end
-  end
-
-
 end

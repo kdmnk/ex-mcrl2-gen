@@ -3,29 +3,28 @@ defmodule Dsl.Entities.Process do
     name: :process,
     describe: "A process that defines commands.",
     args: [:identifier, :state, :quantity],
-    target: Processes.Process,
+    target: Entities.Process,
     schema: [
       identifier: [
         type: :atom
       ],
       state: [
-        type: {:map, :atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}},
-        doc: "State of the process, defined as a map."
+        type: {:map, :atom, {:or, [:atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}]}},
+        doc: "Initial arguments for the process."
       ],
       quantity: [
         type: :integer,
-        doc: "Number of processes to run."
+        doc: "Number of processes to generate (only for mCRL2)."
       ]
     ],
-    entities: [run: [
-      Dsl.Entities.ReceiveCmd.cmd,
-      Dsl.Entities.SendCommand.cmd,
-      Dsl.Entities.BroadcastCmd.cmd,
-      Dsl.Entities.ChoiceCmd.cmd,
-      Dsl.Entities.CallCmd.cmd,
-      Dsl.Entities.CallRecurseCmd.cmd,
-      Dsl.Entities.IfCmd.cmd
-    ]],
+    entities: [
+      states: [
+        Dsl.Entities.State.cmd
+      ],
+      init: [
+        Dsl.Entities.Init.cmd
+      ]
+    ],
     transform: {__MODULE__, :transform_run, []}
   }
 
