@@ -4,6 +4,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
 
   messageType :Nat
   lossyNetwork false
+  doneRequirement [:protocolDone, :emptyNetwork]
 
   process User, %{}, 3 do
     init do
@@ -11,9 +12,8 @@ defmodule Protocols.TwoPhasedCommitMultiple do
     end
     state :idle do
       rcv! {:m, :server}, :m == 0 do
-        choice! "chooseAnswer" do
-          send! :server, 1
-          send! :server, 2
+        choice! :answer, [1, 2] do
+          send! :server, :answer
         end
         state! :wait_for_server, []
       end
@@ -55,7 +55,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
         state! :receive_acks, [:remaining -1]
       end
       rcv! {:m, :some_user}, :m == 5 and :remaining == 1 do
-        mcrl2! :protocolDone
+        mcrl2! :protocolDone, []
       end
     end
   end

@@ -2,13 +2,9 @@ defmodule UserApi do
   use GenServer
   require Logger
 
-  defmodule IdleState do
-    defstruct []
-  end
+  defmodule IdleState, do: defstruct []
 
-  defmodule ChoiceChooseAnswerState do
-    defstruct [:choice, :vars]
-  end
+  defmodule ChoiceChooseAnswerState, do: defstruct [:choice, :vars]
 
   def start_link(_) do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)

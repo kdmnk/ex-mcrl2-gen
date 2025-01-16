@@ -1,0 +1,4 @@
+%[true* . exposeLeader(1001, 1) . true* . exposeLeader(1002, 1)] false 
+
+forall id: Nat . [crash(1001) . (!(crash(id) && resume(1001)))*]<exposeLeader(1002, 1)> true 
+

@@ -1,27 +1,30 @@
 sort Pid = Nat;
-sort MessageType = struct M(t: Nat, data: Nat);
-sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageType);
+sort MessageData = struct MessageData(t: Nat, data: Nat);
+sort Message = struct Message(senderID: Pid, receiverID: Pid, message: MessageData);
 
 map LOSSY_NETWORK : Bool;
 eqn LOSSY_NETWORK = false;
+
+map ALLOW_CRASH : Bool;
+eqn ALLOW_CRASH = true;
 
 map NETWORK_LIMIT : Nat;
 eqn NETWORK_LIMIT = 20;
 
 map Candidate_PID : List(Pid);
-eqn Candidate_PID = [1001, 1002, 1003, 1004, 1005];
+eqn Candidate_PID = [1001, 1002, 1003];
 
 
-map SplitBroadcastedMessages: Pid # List(Pid) # MessageType -> FSet(Message);
+map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> FSet(Message);
 var v_sender: Pid;
    v_receivers: List(Pid);
-    v_message: MessageType;
+    v_message: MessageData;
 eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
     SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
-map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageType # FSet(Message) -> FSet(Message);
+map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageData # FSet(Message) -> FSet(Message);
 var v_sender: Pid;
     v_receivers: List(Pid);
-    v_message: MessageType;
+    v_message: MessageData;
     v_msgs: FSet(Message);
 eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
     ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
@@ -30,112 +33,127 @@ eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receive
 
 
 act
-  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageType;
-  broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageType;
+  sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageData;
+  broadcastMessages, networkBroadcastMessages, broadcast: Pid # List(Pid) # MessageData;
   lose, done, emptyNetwork, protocolDone, timeout;
+  resume, crash: Pid;
+  exposeLeader: Nat # Nat;
 proc
   Candidate(pid: Pid, others: List(Pid)) = 
     Candidateidle(pid, others, 0)
   ;
   Candidatecandidate_wait_ack(pid: Pid, others: List(Pid), term: Nat, remaining_good: Int, allowed_bad: Int) = 
-    (sum some_user : Pid . sum m : MessageType . (
-      ((t(m) < term)) -> (receiveMessage(pid, some_user, m) . 
+    (sum some_user : Pid . sum m : MessageData . (
+      (t((m)) < term) -> (receiveMessage(pid, some_user, m) . 
         Candidatecandidate_wait_ack(pid, others, term, remaining_good, allowed_bad)
       )
     ))
     +
-    (sum some_user : Pid . sum m : MessageType . (
-      ((data(m) ==1 && remaining_good > 1 && t(m) == term)) -> (receiveMessage(pid, some_user, m) . 
+    (sum some_user : Pid . sum m : MessageData . (
+      (((data((m)) == 1 && remaining_good > 1) && t((m)) == term)) -> (receiveMessage(pid, some_user, m) . 
         Candidatecandidate_wait_ack(pid, others, term, remaining_good - 1, allowed_bad)
       )
     ))
     +
-    (sum some_user : Pid . sum m : MessageType . (
-      ((data(m) ==1 && remaining_good == 1 && t(m) == term)) -> (receiveMessage(pid, some_user, m) . 
-        broadcastMessages(pid, others, M(term, 5))
+    (sum some_user : Pid . sum m : MessageData . (
+      (((data((m)) == 1 && remaining_good == 1) && t((m)) == term)) -> (receiveMessage(pid, some_user, m) . 
+        broadcastMessages(pid, others, MessageData(term, 5))
         .
         Candidateidle(pid, others, term)
       )
     ))
     +
-    (sum some_user : Pid . sum m : MessageType . (
-      ((data(m) ==2 && allowed_bad > 0) && t(m) == term) -> (receiveMessage(pid, some_user, m) . 
+    (sum some_user : Pid . sum m : MessageData . (
+      (((data((m)) == 2 && allowed_bad > 0) && t((m)) == term)) -> (receiveMessage(pid, some_user, m) . 
         Candidatecandidate_wait_ack(pid, others, term, remaining_good, allowed_bad - 1)
       )
     ))
     +
-    (sum some_user : Pid . sum m : MessageType . (
-      ((data(m) ==2 && allowed_bad == 0) && t(m) == term) -> (receiveMessage(pid, some_user, m) . 
+    (sum some_user : Pid . sum m : MessageData . (
+      (((data((m)) == 2 && allowed_bad == 0) && t((m)) == term)) -> (receiveMessage(pid, some_user, m) . 
         Candidateidle(pid, others, term)
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) ==0 && pid != candidate && t(m) == term) -> (receiveMessage(pid, candidate, m) . 
-        sendMessage(pid, candidate, M(t(m), 2))
+    (sum candidate : Pid . sum m : MessageData . (
+      (((data((m)) == 0 && candidate != pid) && t((m)) == term)) -> (receiveMessage(pid, candidate, m) . 
+        sendMessage(pid, candidate, MessageData(term, 2))
         .
         Candidatecandidate_wait_ack(pid, others, term, remaining_good, allowed_bad)
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) ==0 && pid != candidate && t(m) > term) -> (receiveMessage(pid, candidate, m) . 
-        sendMessage(pid, candidate, M(t(m), 1))
+    (sum candidate : Pid . sum m : MessageData . (
+      (((data((m)) == 0 && candidate != pid) && t((m)) > term)) -> (receiveMessage(pid, candidate, m) . 
+        sendMessage(pid, candidate, MessageData(t((m)), 1))
         .
-        Candidateidle(pid, others, t(m))
+        Candidateidle(pid, others, t((m)))
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) == 0 && pid == candidate) -> (receiveMessage(pid, candidate, m) . 
-        sendMessage(pid, candidate, M(t(m), 1))
+    (sum candidate : Pid . sum m : MessageData . (
+      ((data((m)) == 0 && candidate == pid)) -> (receiveMessage(pid, candidate, m) . 
+        sendMessage(pid, candidate, MessageData(t((m)), 1))
         .
         Candidatecandidate_wait_ack(pid, others, term, remaining_good, allowed_bad)
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) == 5 && t(m) >= term) -> (receiveMessage(pid, candidate, m) . 
-        protocolDone
+    (sum candidate : Pid . sum m : MessageData . (
+      ((data((m)) == 5 && t((m)) >= term)) -> (receiveMessage(pid, candidate, m) . 
+        exposeLeader(pid, term) 
+        .
+        Candidateidle(pid, others, term)
+
       )
     ))
+    + (ALLOW_CRASH) -> crash(pid) . Candidatecandidate_wait_ackcrashed(pid, others, term, remaining_good, allowed_bad);
+
+    Candidatecandidate_wait_ackcrashed(pid: Pid, others: List(Pid), term: Nat, remaining_good: Int, allowed_bad: Int) = 
+      (sum server : Pid . sum m : MessageData . receiveMessage(pid, server, m)) . Candidatecandidate_wait_ackcrashed(pid, others, term, remaining_good, allowed_bad)
+      + resume(pid) . Candidatecandidate_wait_ack(pid, others, term, remaining_good, allowed_bad)
   ;
 
   Candidateidle(pid: Pid, others: List(Pid), term: Nat) = 
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) == 0 && t(m) > term) -> (receiveMessage(pid, candidate, m) . 
-        sendMessage(pid, candidate, M(t(m), 1))
+    (sum candidate : Pid . sum m : MessageData . (
+      ((data((m)) == 0 && t((m)) > term)) -> (receiveMessage(pid, candidate, m) . 
+        sendMessage(pid, candidate, MessageData(t((m)), 1))
         .
-        Candidateidle(pid, others, t(m))
+        Candidateidle(pid, others, t((m)))
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) == 0 && t(m) == term) -> (receiveMessage(pid, candidate, m) . 
-        sendMessage(pid, candidate, M(term, 2))
+    (sum candidate : Pid . sum m : MessageData . (
+      ((data((m)) == 0 && t((m)) == term)) -> (receiveMessage(pid, candidate, m) . 
+        sendMessage(pid, candidate, MessageData(t((m)), 2))
         .
         Candidateidle(pid, others, term)
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (t(m) < term) -> (receiveMessage(pid, candidate, m) . 
+    (sum candidate : Pid . sum m : MessageData . (
+      (t((m)) < term) -> (receiveMessage(pid, candidate, m) . 
         Candidateidle(pid, others, term)
       )
     ))
     +
-    (sum candidate : Pid . sum m : MessageType . (
-      (data(m) == 5 && t(m) >= term) -> (receiveMessage(pid, candidate, m) . 
+    (sum candidate : Pid . sum m : MessageData . (
+      ((data((m)) == 5 && t((m)) >= term)) -> (receiveMessage(pid, candidate, m) . 
         protocolDone
       )
     ))
-    +
-    timeout . broadcastMessages(pid, others, M(term+1, 0))
+    + (term < 2) -> timeout . 
+    broadcastMessages(pid, others, MessageData(term + 1, 0))
     .
     Candidatecandidate_wait_ack(pid, others, term + 1, ceil((# (others) / 2)), floor((# (others) / 2)))
+    + (ALLOW_CRASH) -> crash(pid) . Candidateidlecrashed(pid, others, term);
+
+    Candidateidlecrashed(pid: Pid, others: List(Pid), term: Nat) = 
+      (sum server : Pid . sum m : MessageData . receiveMessage(pid, server, m)) . Candidateidlecrashed(pid, others, term)
+      + resume(pid) . Candidateidle(pid, others, term)
   ;
 Network(msgs: FSet(Message)) =
-  (sum sender : Pid, msg: MessageType . ((# msgs) < NETWORK_LIMIT) -> (
+  (sum sender : Pid, msg: MessageData . ((# msgs) < NETWORK_LIMIT) -> (
     (sum receiver : Pid .
       networkReceiveMessage(sender, receiver, msg) .
       Network(msgs = msgs + {Message(sender, receiver, msg)})
@@ -152,17 +170,12 @@ Network(msgs: FSet(Message)) =
      ) . Network(msgs = msgs - {msg}))
    + ((# msgs) == 0) -> (emptyNetwork . Network());
 init
-  allow({outgoingMessage, incomingMessage, broadcast, lose, done, timeout},
+  allow({outgoingMessage, incomingMessage, broadcast, lose, exposeLeader, timeout, resume, crash},
   comm({
     sendMessage|networkReceiveMessage -> outgoingMessage,
     networkSendMessage|receiveMessage -> incomingMessage,
-    broadcastMessages|networkBroadcastMessages -> broadcast,
-    protocolDone|protocolDone|protocolDone|protocolDone|protocolDone -> done
+    broadcastMessages|networkBroadcastMessages -> broadcast
   },
-    Candidate(Candidate_PID . 0, Candidate_PID) || 
-    Candidate(Candidate_PID . 1, Candidate_PID) || 
-    Candidate(Candidate_PID . 2, Candidate_PID) ||
-    Candidate(Candidate_PID . 3, Candidate_PID) ||
-    Candidate(Candidate_PID . 4, Candidate_PID) ||  Network({})
+    Candidate(Candidate_PID . 0, Candidate_PID) || Candidate(Candidate_PID . 1, Candidate_PID) || Candidate(Candidate_PID . 2, Candidate_PID) || Network({})
   )
 );

@@ -1,11 +1,11 @@
 defmodule Gen.GenState do
   defstruct [
     :file,
-    :indentation,
+    :indentation, # for mcrl2 writing
     :module_name,
-    :current_state,
-    :mcrl2_static_state,
-    :states_args
+    :current_state, # for Ex
+    :mcrl2_static_state, # pid and Process's main args
+    :states_args # list of all states and their args
   ]
 
   def new(filePath) do

@@ -6,18 +6,26 @@ defmodule Dsl.Root do
     describe: "Root section defining the message type and processes.",
     schema: [
       messageType: [
-        type: {:or, [:atom, :string]},
+        type: {:or, [:atom, :string, :struct]},
         required: true,
         doc: "The type of messages the system handles. Every message has to be this type."
       ],
-      # allowCrash: [
-      #   type: :boolean,
-      #   doc: "If crashing of the nodes is enabled."
-      # ],
+      allowCrash: [
+        type: :boolean,
+        doc: "If crashing of the nodes is enabled."
+      ],
       lossyNetwork: [
         type: :boolean,
         doc: "If loosing messages in the network is enabled."
-      ]
+      ],
+      doneRequirement: [
+        type: {:list, :atom},
+        doc: "Specifies the multi action for the `done` label."
+      ],
+      customLabels: [
+        type: {:map, :atom, {:list, :atom}},
+        doc: "The type of messages the system handles. Every message has to be this type."
+      ],
     ],
     entities: [
       Dsl.Entities.Process.process

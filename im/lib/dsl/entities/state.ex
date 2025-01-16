@@ -3,7 +3,7 @@ defmodule Dsl.Entities.State do
   def cmd(), do: %Spark.Dsl.Entity{
     name: :state,
     describe: "Define a state",
-    target: Commands.State,
+    target: Entities.State,
     args: [:value, :args],
     schema: [
       value: [
@@ -18,7 +18,9 @@ defmodule Dsl.Entities.State do
       ]
     ],
     entities: [body: [
-      Dsl.Entities.ReceiveCmd.cmd
+      Dsl.Entities.ReceiveCmd.cmd,
+    ], timeout: [
+      Dsl.Entities.Timeout.cmd,
     ]],
   }
 

@@ -3,13 +3,13 @@ defmodule Dsl.Entities.Process do
     name: :process,
     describe: "A process that defines commands.",
     args: [:identifier, :state, :quantity],
-    target: Processes.Process,
+    target: Entities.Process,
     schema: [
       identifier: [
         type: :atom
       ],
       state: [
-        type: {:map, :atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}},
+        type: {:map, :atom, {:or, [:atom, {:tuple, [:atom, {:or, [:atom, {:tuple, [:atom, :atom]}]}]}]}},
         doc: "Initial arguments for the process."
       ],
       quantity: [

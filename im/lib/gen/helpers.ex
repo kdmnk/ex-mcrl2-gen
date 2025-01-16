@@ -79,10 +79,11 @@ defmodule Gen.Helpers do
     join(callback, ls, separator)
   end
 
-  defp typeToMcrl2(type) do
+  def typeToMcrl2(type) do
     case type do
       {:pid, _} -> "Pid"
       {:list, type} -> "List(#{typeToMcrl2(type)})"
+      {:set, type} -> "FSet(#{typeToMcrl2(type)})"
       p -> p
     end
   end

@@ -1,24 +1,24 @@
 defmodule Gen.GenEx do
-  alias Processes.Process
+  alias Entities.Process
 
-  def main() do
-    name = "twoPhasedCommitMultiple"
-    folder = "./generated/#{name}/lib"
+  def main(protocol) do
+    name = String.split("#{protocol}", ".") |> List.last |> String.downcase
+    folder = "./generated/#{name}/lib/#{name}"
     if !File.exists?(folder) do
-      System.cmd("mix", ["new", name, "--sup"])
+      System.cmd("mix", ["new", "./generated/#{name}", "--sup"])
       :ok = File.mkdir_p(folder)
     end
 
-    conf = Conf.getConf(Protocols.TwoPhasedCommitMultiple)
+    conf = Conf.getConf(protocol)
     run(folder, conf)
   end
 
-  def run(folder, %{:processes => processes}) do
+  def run(folder, %{:processes => processes, :messageType => messageType}) do
     for %Process{} = p <- processes do
       state = Gen.GenState.new("#{folder}/#{p.identifier}.ex")
       stateApi = Gen.GenState.new("#{folder}/#{p.identifier}Api.ex")
 
-      Process.writeEx(state, stateApi, p)
+      Process.writeEx(state, stateApi, p, messageType)
 
       File.close(state.file)
       File.close(stateApi.file)
@@ -51,16 +51,25 @@ defmodule Gen.GenEx do
   def stringifyAST(ast, getVarVals \\ fn x -> x end) do
     IO.inspect(ast)
     case ast do
-      {op, _pos, [left, right]} when op in [:==, :>, :<, :-, :in] -> "#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)}"
-      [{op, _pos, [left, right]}] when op in [:==, :>, :<, :-, :in] -> "(#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)})"
+
+      {op, _pos, [left, right]} when op in [:==, :!=, :>, :>=, :<=, :<, :-, :+, :in, :/] -> "#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)}"
+      [{op, _pos, [left, right]}] when op in [:==, :!=, :>, :>=, :<=, :<, :-, :+, :in, :/] -> "(#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)})"
       [{:|, _pos, [left, right]}] -> "[#{stringifyAST(left, getVarVals)} | #{stringifyAST(right, getVarVals)}]"
       {:or, _pos, [left, right]} -> "(#{stringifyAST(left, getVarVals)} or #{stringifyAST(right, getVarVals)})"
       {:and, _pos, [left, right]} -> "(#{stringifyAST(left, getVarVals)} and #{stringifyAST(right, getVarVals)})"
       {:!, _pos, right} -> "!#{stringifyAST(right, getVarVals)}"
-      {var, _pos, nil} -> stringifyAST(var, getVarVals)
-      var when is_atom(var) -> getVarVals.(var)
-      int when is_integer(int) -> int
       {:length, _pos, arg} -> "length(#{stringifyAST(arg, getVarVals)})"
+      {:ceil, _pos, arg} -> "Float.ceil(#{stringifyAST(arg, getVarVals)})"
+      {:floor, _pos, arg} -> "Float.floor(#{stringifyAST(arg, getVarVals)})"
+      {:self, _pos, _arg} -> "{__MODULE__, Node.self()}"
+      {:index, _pos, [arg1, arg2]} -> "Enum.at(#{stringifyAST(arg1)}, #{stringifyAST(arg2)})"
+      {:{}, _pos, arg} -> "{#{stringifyAST(arg)}}"
+      {var, _pos, nil} -> stringifyAST(var, getVarVals)
+      {atom, _pos, args} when is_atom(atom) -> "#{stringifyAST(args, getVarVals)}.#{atom}"
+      tuple when is_tuple(tuple) -> "(#{Enum.map(Tuple.to_list(tuple), fn v -> stringifyAST(v, getVarVals) end) |> Enum.join(", ")})"
+      boolean when boolean in ["true", :true, true, "false", :false, false] -> boolean
+      int when is_integer(int) -> int
+      var when is_atom(var) -> getVarVals.(var)
       [a | b] when b != [] -> "(#{stringifyAST(a, getVarVals)}, #{stringifyAST(b, getVarVals)})"
       [a] -> "(#{stringifyAST(a, getVarVals)})"
       [] -> "[]"
