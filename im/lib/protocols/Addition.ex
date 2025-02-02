@@ -12,7 +12,7 @@ defmodule Protocols.Addition do
     end
     state :wait_for_answer, %{} do
       rcv! {:n, :server}, :n == 2 do
-        mcrl2! :protocolDone, []
+        label! :protocolDone, []
       end
     end
   end

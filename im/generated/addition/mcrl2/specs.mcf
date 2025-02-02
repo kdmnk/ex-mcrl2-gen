@@ -21,6 +21,16 @@
 
 %% Deadlock freedom, except after done <=> done is the only deadlock
 % [(!(done))*]<true>true
+%[(!(done))*]<true* . done>true
+[true* . done] true
+%forall sender, receiver: Pid, msg: MessageData .
+%[true* . outgoingMessage(sender, receiver, msg)]<incomingMessage(receiver, sender, msg)>true 
+
+%forall pid, pid2: Pid, msg: MessageData . 
+%(val((pid == Server_PID || pid == Client_PID) && (pid2 == Server_PID || pid2 == Client_PID) && !(pid == pid2) && msg < 6)) =>
+%[true* . canReceiveNextMessage(pid, msg)]<incomingMessage(pid, pid2, msg)> true
+
+
 
 
 %% if message is sent, it will be received eventually -- only for finite and final protocols -- ??

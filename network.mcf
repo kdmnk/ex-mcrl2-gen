@@ -4,7 +4,7 @@ forall sender, receiver: Pid, msg: MessageType.
 % any outgoing can be later followed by incoming - holds
 %[true* . outgoingMessage(sender, receiver, msg)*]<true* . incomingMessage(receiver, sender, msg)>true
 
-% incoming must be preceded by outgoing - holds (only if broadcasting is not allowed)
+% incoming can not happen without an outgoing before that - holds (only if broadcasting is not allowed)
 %[!outgoingMessage(sender, receiver, msg)* .incomingMessage(receiver, sender, msg)] false
 
 %% a message might get stuck in the network - holds - should not hold in a finite protocol ?
@@ -16,3 +16,6 @@ forall sender, receiver: Pid, msg: MessageType.
 
 % Deadlock freedom
 %[true*]<true>true
+
+forall sender2, receiver2, msg2 : MessageType . val(!(sender == sender2) && !(receiver == receiver2) && !(msg == msg2)) => 
+[true* . outgoingMessage(sender, receiver, msg) . outgoingMessage(sender2, receiver2, msg2)]<incomingMessage(receiver2, sender2, msg2) . incomingMessage(receiver, sender, msg)>true

@@ -12,7 +12,7 @@ defmodule Dsl.Entities.ChoiceCmd do
       values: [
         type: {:or, [
           {:tuple, [:integer, :integer]},
-          {:list, {:or, [:atom, :integer]}}
+          {:list, {:or, [:boolean, :integer]}}
         ]}
       ]
     ],

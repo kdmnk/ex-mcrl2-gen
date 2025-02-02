@@ -55,7 +55,7 @@ defmodule Protocols.TwoPhasedCommitMultiple do
         state! :receive_acks, [:remaining -1]
       end
       rcv! {:m, :some_user}, :m == 5 and :remaining == 1 do
-        mcrl2! :protocolDone, []
+        label! :protocolDone, []
       end
     end
   end

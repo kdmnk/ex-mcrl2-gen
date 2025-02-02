@@ -7,9 +7,10 @@ defmodule Commands.Send do
   def writeEx(%Gen.GenState{} = state, %Commands.Send{} = cmd) do
     to = Gen.GenEx.stringifyASTwithLookup(cmd.to)
     message = Gen.GenEx.stringifyASTwithLookup(cmd.message)
+    message = if(state.struct_message_type, do: "Message.new#{message}", else: message)
     """
-    #{Gen.GenEx.writeLog(state, "sending \#{inspect(Message.new#{message})} to \#{inspect(#{to})}")}
-    GenServer.cast(#{to}, {{__MODULE__, Node.self()}, Message.new#{message}})
+    #{Gen.GenEx.writeLog(state, "sending \#{inspect(#{message})} to \#{inspect(#{to})}")}
+    GenServer.cast(#{to}, {{__MODULE__, Node.self()}, #{message}})
     """
   end
 

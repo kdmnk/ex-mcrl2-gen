@@ -4,10 +4,12 @@ defmodule Commands.Broadcast do
   defstruct [:to, :message]
 
   def writeEx(%Gen.GenState{} = state, %Commands.Broadcast{} = cmd) do
+    message = Gen.GenEx.stringifyASTwithLookup(cmd.message)
+    message = if(state.struct_message_type, do: "Message.new#{message}", else: message)
     """
-    #{Gen.GenEx.writeLog(state, "broadcasting \#{inspect(Message.new#{Gen.GenEx.stringifyASTwithLookup(cmd.message)})} to #{Gen.GenEx.stringifyASTwithLookup(cmd.to)}")}
+    #{Gen.GenEx.writeLog(state, "broadcasting \#{inspect(#{message})} to #{Gen.GenEx.stringifyASTwithLookup(cmd.to)}")}
     #{Gen.GenEx.stringifyASTwithLookup(cmd.to)}
-    |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, Message.new#{Gen.GenEx.stringifyASTwithLookup(cmd.message)}}) end)
+    |> Enum.map(fn c -> GenServer.cast(c, {{__MODULE__, Node.self()}, #{message}}) end)
     """
   end
 

@@ -28,7 +28,6 @@ defmodule Dsl.Entities.Process do
     transform: {__MODULE__, :transform_run, []}
   }
 
-  @spec transform_run(__MODULE__) :: {:ok, __MODULE__}
   def transform_run(entity) do
     id = String.replace_prefix(to_string(entity.identifier), "Elixir.", "")
     state = Enum.map(entity.state, fn
