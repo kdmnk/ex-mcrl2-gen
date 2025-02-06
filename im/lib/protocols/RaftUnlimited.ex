@@ -6,6 +6,7 @@ defmodule Protocols.RaftUnlimited do
   lossyNetwork false
   allowCrash true
   doneRequirement [:protocolDone, :protocolDone, :protocolDone, :protocolDone, :protocolDone]
+  fifoNetwork true
   customLabels %{:exposeLeader => [:Nat, :Nat]}
 
   process Candidate, %{:others => {:list, {:pid, Candidate}}}, 5 do
@@ -25,7 +26,7 @@ defmodule Protocols.RaftUnlimited do
           end
           else! do
             broadcast! :others, {:term, 5}
-            mcrl2! :exposeLeader, [self(), :term]
+            label! :exposeLeader, [self(), :term]
             state! :leader, [:term]
           end
         end
@@ -69,7 +70,7 @@ defmodule Protocols.RaftUnlimited do
       end
       # receive new leader
       rcv! {:m, :candidate}, data(:m) == 5 and t(:m) >= :term do
-        mcrl2! :protocolDone, []
+        label! :protocolDone, []
         state! :idle, [t(:m)]
       end
     end
@@ -90,7 +91,7 @@ defmodule Protocols.RaftUnlimited do
       end
       # receive new leader
       rcv! {:m, :candidate}, data(:m) == 5 and t(:m) >= :term do
-        mcrl2! :protocolDone, []
+        label! :protocolDone, []
         state! :idle, [t(:m)]
       end
       # ignore remaining votes
@@ -115,7 +116,7 @@ defmodule Protocols.RaftUnlimited do
       rcv! {:m, :candidate}, data(:m) == 5 and t(:m) >= :term do
         if! :candidate == self() do
           then! do
-            mcrl2! :protocolDone, []
+            label! :protocolDone, []
             state! :leader, [t(:m)]
           end
           else! do

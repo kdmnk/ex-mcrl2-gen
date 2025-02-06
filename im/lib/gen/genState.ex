@@ -5,7 +5,8 @@ defmodule Gen.GenState do
     :module_name,
     :current_state, # for Ex
     :mcrl2_static_state, # pid and Process's main args
-    :states_args # list of all states and their args
+    :states_args, # list of all states and their args
+    :struct_message_type # if the messageType is struct or not
   ]
 
   def new(filePath) do

@@ -20,10 +20,22 @@
 
 
 %% Deadlock freedom, except after done <=> done is the only deadlock
-[(!done)*]<true>true
+[(!done)*]<true* . done>true
 
+%forall sender, receiver: Pid, msg: MessageData . 
+%(val((sender in User_PID || sender == Mach_PID) && (receiver in User_PID || receiver == Mach_PID) && msg < 6)) =>
+%[true* . outgoingMessage(sender, receiver, msg)] <incomingMessage(receiver, sender, msg)> true
 
+%forall sender, receiver: Pid, msg: MessageData . 
+%(val((sender in User_PID || sender == Mach_PID) && (receiver in User_PID) && msg < 6)) =>
+%[true* . broadcast(sender, User_PID, msg)]<incomingMessage(receiver, sender, msg)> true
 
 %% if message is sent, it will be received eventually -- only for finite and final protocols -- ??
-%
+
 %[true* . outgoingMessage(sender, receiver, msg) . true* . incomingMessage(receiver, sender, msg)] true
+
+%forall pid, pid2: Pid, msg: MessageData .
+%(val((pid in User_PID || pid == Mach_PID) && (pid2 in User_PID || pid2 == Mach_PID) && (pid != pid2) && msg < 6)) =>
+%[true* . canReceiveNextMessage(pid, pid2, msg)] <incomingMessage(pid, pid2, msg)> true
+
+

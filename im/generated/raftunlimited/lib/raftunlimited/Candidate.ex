@@ -405,7 +405,9 @@ defmodule Candidate do
   end
 
   def handle_cast(:timeout, state) do
-    Logger.info("Candidate [#{state.state}]: timeout without effect")
+    # Logger.info(
+    #  "Candidate [#{state.state}]: timeout without effect"
+    # )
     state = updateState(state, %{})
     {:noreply, state}
   end

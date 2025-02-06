@@ -1,5 +1,4 @@
 defmodule Dsl.Root do
-
   use Spark.Dsl.Extension, sections: [%Spark.Dsl.Section{
     top_level?: true,
     name: :root,
@@ -21,6 +20,10 @@ defmodule Dsl.Root do
       doneRequirement: [
         type: {:list, :atom},
         doc: "Specifies the multi action for the `done` label."
+      ],
+      fifoNetwork: [
+        type: :boolean,
+        doc: "Specifies if the network layer should be configured with first-in-first-out messages, or to use sets."
       ],
       customLabels: [
         type: {:map, :atom, {:list, :atom}},

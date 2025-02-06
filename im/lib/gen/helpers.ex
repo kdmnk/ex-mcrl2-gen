@@ -36,23 +36,6 @@ defmodule Gen.Helpers do
     Agent.get_and_update(:randomAgent, fn i -> {i, i + 1} end)
   end
 
-  def addNonDeterministicChoice(choice) do
-    if Process.whereis(:choiceAgent) == nil do
-      {:ok, choiceAgent} = Agent.start_link(fn -> [] end)
-      Process.register(choiceAgent, :choiceAgent)
-    end
-
-    Agent.update(:choiceAgent, fn choices -> [choice | choices] end)
-  end
-
-  def getNonDeterministicChoices() do
-    if Process.whereis(:choiceAgent) == nil do
-      {:ok, choiceAgent} = Agent.start_link(fn -> [] end)
-      Process.register(choiceAgent, :choiceAgent)
-    end
-
-    Agent.get(:choiceAgent, fn i -> i end)
-  end
 
   def pidName(name) do
     cleaned = String.replace_prefix(to_string(name), "Elixir.", "")

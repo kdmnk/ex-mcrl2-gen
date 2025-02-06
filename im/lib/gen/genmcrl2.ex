@@ -10,10 +10,17 @@ defmodule Gen.GenMcrl2 do
     run(folder, conf)
   end
 
-  def run(folder, %{:messageType => messageType, :lossyNetwork => lossyNetwork, :allowCrash => allowCrash, :doneRequirement => doneRequirement, :customLabels => customLabels, :processes => processes}) do
+  def run(folder, %{
+      :messageType => messageType,
+      :lossyNetwork => lossyNetwork,
+      :allowCrash => allowCrash,
+      :doneRequirement => doneRequirement,
+      :customLabels => customLabels,
+      :fifoNetwork => fifoNetwork,
+      :processes => processes}) do
     state = Gen.GenState.new("#{folder}/specs.mcrl2")
 
-    Gen.Helpers.write(state, getDeclarationsString(messageType, lossyNetwork, allowCrash, processes, customLabels))
+    Gen.Helpers.write(state, getDeclarationsString(messageType, lossyNetwork, allowCrash, processes, customLabels, fifoNetwork))
 
     for %Process{} = p <- processes do
       mcrl2_static_state = Keyword.merge([pid: "Pid"], p.state)
@@ -21,8 +28,8 @@ defmodule Gen.GenMcrl2 do
       Process.writeMcrl2(p, state)
     end
 
-    Gen.Helpers.write(state, getNetworkString())
-    Gen.Helpers.write(state, getInitString(processes, doneRequirement, customLabels))
+    Gen.Helpers.write(state, getNetworkString(fifoNetwork))
+    Gen.Helpers.write(state, getInitString(processes, doneRequirement, customLabels, fifoNetwork))
 
     File.close(state.file)
   end
@@ -35,7 +42,7 @@ defmodule Gen.GenMcrl2 do
       fn -> Gen.Helpers.writeLn(state, separator) end
     )
 
-  defp getDeclarationsString(messageType, lossyNetwork, allowCrash, processes, customLabels) do
+  defp getDeclarationsString(messageType, lossyNetwork, allowCrash, processes, customLabels, fifoNetwork) do
     randomPids = Enum.zip(1..100, processes)
     |> Enum.map(fn {n, p} ->
       case p.quantity do
@@ -103,22 +110,7 @@ defmodule Gen.GenMcrl2 do
     #{makeMessageStr}
     #{randomPids}
 
-    map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> FSet(Message);
-    var v_sender: Pid;
-	      v_receivers: List(Pid);
-        v_message: MessageData;
-    eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
-        SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
-    map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageData # FSet(Message) -> FSet(Message);
-    var v_sender: Pid;
-        v_receivers: List(Pid);
-        v_message: MessageData;
-        v_msgs: FSet(Message);
-    eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
-        ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
-                         SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
-                         + {Message(v_sender, head(v_receivers), v_message)} );
-
+    #{getBroadcastedMessagesFn(fifoNetwork)}
 
     act
       sendMessage, receiveMessage, networkReceiveMessage, networkSendMessage, outgoingMessage, incomingMessage: Pid # Pid # MessageData;
@@ -130,7 +122,61 @@ defmodule Gen.GenMcrl2 do
     """
   end
 
-  defp getNetworkString(), do: """
+  defp getBroadcastedMessagesFn(true), do: """
+  map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> List(Message);
+  var v_sender: Pid;
+    v_receivers: List(Pid);
+      v_message: MessageData;
+  eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
+      SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, []);
+  map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageData # List(Message) -> List(Message);
+  var v_sender: Pid;
+      v_receivers: List(Pid);
+      v_message: MessageData;
+      v_msgs: List(Message);
+  eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
+      ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
+                      SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
+                      <| Message(v_sender, head(v_receivers), v_message));
+  """
+
+  defp getBroadcastedMessagesFn(_), do: """
+  map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> FSet(Message);
+  var v_sender: Pid;
+      v_receivers: List(Pid);
+      v_message: MessageData;
+  eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
+      SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});
+  map SplitBroadcastedMessagesHelper: Pid # List(Pid) # MessageData # FSet(Message) -> FSet(Message);
+  var v_sender: Pid;
+      v_receivers: List(Pid);
+      v_message: MessageData;
+      v_msgs: FSet(Message);
+  eqn ((# v_receivers) == 0) -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) = v_msgs;
+      ((# v_receivers) > 0)  -> SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, v_msgs) =
+                       SplitBroadcastedMessagesHelper(v_sender, tail(v_receivers), v_message, v_msgs
+                       + {Message(v_sender, head(v_receivers), v_message)} );
+  """
+
+  defp getNetworkString(true), do: """
+    Network(msgs: List(Message)) =
+    (sum sender : Pid, msg: MessageData . ((# msgs) < NETWORK_LIMIT) -> (
+      (sum receiver : Pid .
+        networkReceiveMessage(sender, receiver, msg) .
+        Network(msgs = msgs <| Message(sender, receiver, msg))
+      )
+      +
+      (sum receivers: List(Pid) .
+        networkBroadcastMessages(sender, receivers, msg) .
+        Network(msgs = msgs ++ SplitBroadcastedMessages(sender, receivers, msg)))
+     ))
+     +
+      ((# msgs) > 0) -> ((networkSendMessage(receiverID(head(msgs)), senderID(head(msgs)), message(head(msgs)))
+        + ((LOSSY_NETWORK) -> lose)
+      ) . Network(msgs = tail(msgs)))
+     + ((# msgs) == 0) -> (emptyNetwork . Network());
+  """
+  defp getNetworkString(_), do: """
     Network(msgs: FSet(Message)) =
       (sum sender : Pid, msg: MessageData . ((# msgs) < NETWORK_LIMIT) -> (
         (sum receiver : Pid .
@@ -150,7 +196,7 @@ defmodule Gen.GenMcrl2 do
        + ((# msgs) == 0) -> (emptyNetwork . Network());
     """
 
-  defp getInitString(processes, doneRequirement, customLabels) do
+  defp getInitString(processes, doneRequirement, customLabels, fifoNetwork) do
     pr = processes
       |> Enum.map(fn p ->
         case p.quantity do
@@ -190,7 +236,7 @@ defmodule Gen.GenMcrl2 do
         broadcastMessages|networkBroadcastMessages -> broadcast#{if(doneRequirement, do: ",", else: "")}
         #{if(doneRequirement, do: "#{Enum.join(doneRequirement, "|")} -> done", else: "")}
       },
-        #{pr} || Network({})
+        #{pr} || Network(#{if(fifoNetwork, do: "[]", else: "{}")})
       )
     );
     """
@@ -198,7 +244,7 @@ defmodule Gen.GenMcrl2 do
 
   def stringifyAST(ast) do
     case ast do
-      {op, _pos, [left, right]} when op in [:==, :!=, :>, :>=, :<=, :<, :-, :+, :in, :/] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
+      {op, _pos, [left, right]} when op in [:==, :!=, :>, :>=, :<=, :<, :-, :*, :+, :in, :/] -> "#{stringifyAST(left)} #{op} #{stringifyAST(right)}"
       {:|, _pos, [left, right]} -> "#{stringifyAST(left)} |> #{stringifyAST(right)}"
       {:or, _pos, [left, right]} -> "(#{stringifyAST(left)} || #{stringifyAST(right)})"
       {:and, _pos, [left, right]} -> "(#{stringifyAST(left)} && #{stringifyAST(right)})"
