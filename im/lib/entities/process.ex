@@ -59,9 +59,15 @@ defmodule Entities.Process do
           GenServer.call({__MODULE__, Node.self()}, :wait, :infinity)
         end
       """, else: "")}
-      #{Enum.map(choices, fn cmd -> """
-      def choose#{Commands.Choice.getStateLabel(cmd)}(%Choice#{Commands.Choice.getStateLabel(cmd)}State{}, choice) do
-          GenServer.cast({#{p.identifier}, Node.self()}, {:#{cmd.label}, choice})
+      #{Enum.map(choices, fn cmd ->
+      guard = case cmd.values do
+          %Range{first: from, last: to} -> "when choice >= #{from} && choice <= #{to}"
+          [l|ls] -> "when choice in [#{Enum.join([l|ls], ", ")}]"
+          _ -> ""
+      end
+      """
+      def choose#{Commands.Choice.getStateLabel(cmd)}(%Choice#{Commands.Choice.getStateLabel(cmd)}State{}, choice) #{guard} do
+          GenServer.cast({#{p.identifier}, Node.self()}, {:#{cmd.name}, choice})
           %IdleState{}
         end
       """ end)}
@@ -99,22 +105,31 @@ defmodule Entities.Process do
     s = %Gen.GenState{
       state
       | module_name: p.identifier,
-        mcrl2_static_state: stateList(p),
-        states_args: Map.new(p.states, fn %Entities.State{value: value, args: args} -> {value, args} end)
+        #mcrl2_static_state: stateList(p),
+        states_args: Map.new(p.states, fn %Entities.State{value: value, args: args} -> {value, args} end),
+        struct_message_type: is_list(messageType)
     }
+
+    structMessage = case messageType do
+      keyword when is_list(keyword) ->
+        """
+        defmodule Message do
+          defstruct [#{Keyword.keys(messageType) |> Enum.map(fn v -> ":#{v}" end) |> Enum.join(", ")}]
+
+          def new(#{Keyword.keys(messageType) |> Enum.join(", ")}) do
+            %Message{#{Keyword.keys(messageType) |> Enum.map(fn v -> "#{v}: #{v}" end) |> Enum.join(", ")}}
+          end
+        end
+        """
+      _ -> ""
+    end
 
     Gen.Helpers.writeLn(s, """
     defmodule #{p.identifier} do
       use GenServer
       require Logger
 
-      defmodule Message do
-        defstruct [#{Keyword.keys(messageType) |> Enum.map(fn v -> ":#{v}" end) |> Enum.join(", ")}]
-
-        def new(#{Keyword.keys(messageType) |> Enum.join(", ")}) do
-          %Message{#{Keyword.keys(messageType) |> Enum.map(fn v -> "#{v}: #{v}" end) |> Enum.join(", ")}}
-        end
-      end
+      #{structMessage}
 
       def start_link(vars) do
         GenServer.start_link(__MODULE__, vars, name: __MODULE__)
@@ -134,26 +149,21 @@ defmodule Entities.Process do
       end
 
       #{Enum.map(choices, fn cmd ->
-      [case1, case2] = cmd.body
-      """
-      def handle_cast({:#{cmd.label}, true}, state) do
-          #{GenEx.writeCmds(s, [case1])}
-          {:noreply, state}
-        end
-
-        def handle_cast({:#{cmd.label}, false}, state) do
-          #{GenEx.writeCmds(s, [case2])}
-          {:noreply, state}
-        end
-      """
+        """
+        def handle_cast({:#{cmd.name}, #{cmd.name}}, state) do
+            state = updateState(state, %{:#{cmd.name} => #{cmd.name}})
+            #{GenEx.writeCmds(s, cmd.body)}
+            {:noreply, state}
+          end
+        """
       end)}
 
       #{GenEx.writeCmds(s, p.states)}
 
       def handle_cast(:timeout, state) do
-        Logger.info(
-          "Candidate [\#{state.state}]: timeout without effect"
-        )
+        #Logger.info(
+        #  "Candidate [\#{state.state}]: timeout without effect"
+        #)
         state = updateState(state, %{})
         {:noreply, state}
       end

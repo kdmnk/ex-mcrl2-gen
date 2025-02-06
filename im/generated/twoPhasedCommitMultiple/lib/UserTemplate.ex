@@ -1,4 +1,4 @@
-defmodule Client do
+defmodule User do
   use GenServer
   require Logger
 
@@ -7,8 +7,8 @@ defmodule Client do
   end
 
   def init(vars) do
-    vars = %{:server => var(vars, :server)}
-    Logger.info("Client: initialised with #{inspect(vars)}")
+    vars = %{}
+    Logger.info("User: initialised with #{inspect(vars)}")
     {:ok, vars}
   end
 
@@ -17,27 +17,28 @@ defmodule Client do
       :timer.apply_after(:rand.uniform(10000), fn -> GenServer.cast(__MODULE__, :timeout) end)
 
     state = Map.put(state, :timer, timer)
-    Logger.info("Client: sending #{inspect(1)} to #{inspect(var(state, :server))}")
-    GenServer.cast(var(state, :server), {{__MODULE__, Node.self()}, 1})
 
-    state = updateState(state, %{:state => :wait_for_answer})
+    # init commands
+
     {:noreply, state}
   end
 
-  def handle_cast({server, n}, state) when state.state == :wait_for_answer and n == 2 do
-    Logger.info(
-      "Client [wait_for_answer]: received #{inspect(n)} from #{inspect(server)} (n == 2)"
-    )
+  def handle_cast({:answer, answer}, state) do
+    state = updateState(state, %{:answer => answer})
 
-    state = updateState(state, %{:n => n, :server => server})
-    Logger.info("Client [wait_for_answer]: state: protocolDone")
+    # :answer choice children commands
+
     {:noreply, state}
   end
+
+  ##
+  ## receive commands...
+  ##
 
   def handle_cast(:timeout, state) do
-    # Logger.info(
-    #  "Candidate [#{state.state}]: timeout without effect"
-    # )
+    Logger.info(
+      "Candidate [#{state.state}]: timeout without effect"
+    )
     state = updateState(state, %{})
     {:noreply, state}
   end

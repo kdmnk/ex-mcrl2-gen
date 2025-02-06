@@ -27,7 +27,7 @@ defmodule Commands.Choice do
   end
 
   def getStateLabel(%Commands.Choice{name: name}) do
-    "#{String.upcase(String.at(name, 0))}#{String.slice(name, 1..-1//1)}"
+    "#{String.upcase(String.at("#{name}", 0))}#{String.slice("#{name}", 1..-1//1)}"
   end
 
 end

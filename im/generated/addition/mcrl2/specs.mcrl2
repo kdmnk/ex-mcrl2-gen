@@ -21,7 +21,7 @@ eqn Server_PID = 2000;
 
 map SplitBroadcastedMessages: Pid # List(Pid) # MessageData -> FSet(Message);
 var v_sender: Pid;
-   v_receivers: List(Pid);
+    v_receivers: List(Pid);
     v_message: MessageData;
 eqn SplitBroadcastedMessages(v_sender, v_receivers, v_message) =
     SplitBroadcastedMessagesHelper(v_sender, v_receivers, v_message, {});

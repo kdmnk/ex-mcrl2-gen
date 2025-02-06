@@ -1,10 +1,13 @@
 defmodule Gen.GenEx do
   alias Entities.Process
+  require Logger
 
   def main(protocol) do
-    name = String.split("#{protocol}", ".") |> List.last |> String.downcase
+    <<first::utf8, rest::binary>> = String.split("#{protocol}", ".") |> List.last
+    name = String.downcase(<<first::utf8>>) <> rest
     folder = "./generated/#{name}/lib/#{name}"
     if !File.exists?(folder) do
+      Logger.info("Creating project in folder: #{folder}")
       System.cmd("mix", ["new", "./generated/#{name}", "--sup"])
       :ok = File.mkdir_p(folder)
     end
@@ -49,11 +52,9 @@ defmodule Gen.GenEx do
     stringifyAST(ast, fn x -> "var(state, :#{x})" end)
   end
   def stringifyAST(ast, getVarVals \\ fn x -> x end) do
-    IO.inspect(ast)
     case ast do
-
-      {op, _pos, [left, right]} when op in [:==, :!=, :>, :>=, :<=, :<, :-, :+, :in, :/] -> "#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)}"
-      [{op, _pos, [left, right]}] when op in [:==, :!=, :>, :>=, :<=, :<, :-, :+, :in, :/] -> "(#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)})"
+      {op, _pos, [left, right]} when op in [:==, :!=, :>, :>=, :<=, :<, :-, :*, :+, :in, :/] -> "#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)}"
+      [{op, _pos, [left, right]}] when op in [:==, :!=, :>, :>=, :<=, :<, :-, :*, :+, :in, :/] -> "(#{stringifyAST(left, getVarVals)} #{op} #{stringifyAST(right, getVarVals)})"
       [{:|, _pos, [left, right]}] -> "[#{stringifyAST(left, getVarVals)} | #{stringifyAST(right, getVarVals)}]"
       {:or, _pos, [left, right]} -> "(#{stringifyAST(left, getVarVals)} or #{stringifyAST(right, getVarVals)})"
       {:and, _pos, [left, right]} -> "(#{stringifyAST(left, getVarVals)} and #{stringifyAST(right, getVarVals)})"
